@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+@layer base {
+    :root {
+        --background: 220 20% 8%;
+        --foreground: 210 40% 98%;
+
+        --card: 220 18% 12%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 220 18% 12%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 0 72% 51%;
+        --primary-foreground: 210 40% 98%;
+
+        --secondary: 220 16% 16%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 220 16% 16%;
+        --muted-foreground: 215 20% 65%;
+
+        --accent: 180 82% 45%;
+        --accent-foreground: 220 20% 8%;
+
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 220 16% 20%;
+        --input: 220 16% 20%;
+        --ring: 180 82% 45%;
+
+        --radius: 0.75rem;
+
+        --cinema-gradient: linear-gradient(135deg, hsl(0 72% 51%) 0%, hsl(0 62% 41%) 100%);
+        --accent-gradient: linear-gradient(135deg, hsl(180 82% 45%) 0%, hsl(180 72% 35%) 100%);
+        --card-shadow: 0 4px 20px -2px hsl(0 0% 0% / 0.5);
+        --card-hover-shadow: 0 8px 30px -4px hsl(0 72% 51% / 0.3);
+        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        --sidebar-background: 0 0% 98%;
+
+        --sidebar-foreground: 240 5.3% 26.1%;
+
+        --sidebar-primary: 240 5.9% 10%;
+
+        --sidebar-primary-foreground: 0 0% 98%;
+
+        --sidebar-accent: 240 4.8% 95.9%;
+
+        --sidebar-accent-foreground: 240 5.9% 10%;
+
+        --sidebar-border: 220 13% 91%;
+
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+
+    .dark {
+        --background: 220 20% 8%;
+        --foreground: 210 40% 98%;
+
+        --card: 220 18% 12%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 220 18% 12%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 0 72% 51%;
+        --primary-foreground: 210 40% 98%;
+
+        --secondary: 220 16% 16%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 220 16% 16%;
+        --muted-foreground: 215 20% 65%;
+
+        --accent: 180 82% 45%;
+        --accent-foreground: 220 20% 8%;
+
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 220 16% 20%;
+        --input: 220 16% 20%;
+        --ring: 180 82% 45%;
+        --sidebar-background: 240 5.9% 10%;
+        --sidebar-foreground: 240 4.8% 95.9%;
+        --sidebar-primary: 224.3 76.3% 48%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 3.7% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 240 3.7% 15.9%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+
+
+    .login-logo {
+        width: 90px;
+        height: 90px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+
+    .logo-bg {
+        width: 90px;
+        height: 90px;
+        border-radius: 20px;
+
+        background: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--accent)));
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+}
+
+
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
