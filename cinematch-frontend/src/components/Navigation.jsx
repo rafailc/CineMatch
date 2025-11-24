@@ -1,7 +1,17 @@
 import { Film, Search, Brain, Sparkles, MessageSquare, LogOut } from "lucide-react";
 import NavLink from "../components/NavLink.jsx";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Navigation() {
+    const { signOut } = useAuth();
+    const navigate = useNavigate();
+
+    async function handleLogout() {
+        await signOut();
+        navigate("/login");
+    }
 
     const navItems = [
         { path: "/", Icon: Film, label: "Home" },
@@ -40,6 +50,17 @@ export default function Navigation() {
                                 <span className="hidden md:inline">{label}</span>
                             </NavLink>
                         ))}
+                    </div>
+
+                    {/* DEJIA / LOGOUT BUTTON  */}
+                    <div className="absolute right-0 flex items-center">
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            <span className="hidden sm:inline">Logout</span>
+                        </button>
                     </div>
 
                 </div>

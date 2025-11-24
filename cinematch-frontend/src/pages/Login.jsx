@@ -39,7 +39,31 @@ export default function Login() {
         }
     };
 
+    async function handleGoogleLogin() {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+                redirectTo: `${window.location.origin}/`
+            }
+        });
 
+        if (error) {
+            console.error("Google login error:", error);
+        }
+    }
+
+    async function handleGithubLogin() {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "github",
+            options: {
+                redirectTo: `${window.location.origin}/`
+            }
+        });
+
+        if (error) {
+            console.error("GitHub login error:", error);
+        }
+    }
 
     async function handleRegister(e) {
         e.preventDefault();
@@ -170,6 +194,13 @@ export default function Login() {
                         <hr className="line" />
                     </div>
 
+                    <button className="sign-in_ggl" onClick={handleGoogleLogin}>
+                        <span>Sign In with Google</span>
+                    </button>
+
+                    <button className="sign-in_ghub" onClick={handleGithubLogin}>
+                        <span>Sign In with GitHub</span>
+                    </button>
 
                     {/* ALA3E SE REGISTER */}
                     <p className="note">
