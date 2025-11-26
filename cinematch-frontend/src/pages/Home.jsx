@@ -1,6 +1,6 @@
 import { Loader2, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import { testTmdb } from "../lib/test_tmdb.js";
+import { getTrendingMovies,getMovieDetails } from "../lib/tmdbBackend.js";
 
 export default function Home() {
 
@@ -9,8 +9,8 @@ export default function Home() {
 
     useEffect(() => {
         async function load() {
-            const data = await testTmdb();
-            if (data) setMovies(data);
+            const data = await getTrendingMovies(1);
+            if (data?.results) setMovies(data.results);
             setLoading(false);
         }
         load();
