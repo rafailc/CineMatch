@@ -1,8 +1,20 @@
 import { Loader2, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { testTmdb } from "../lib/test_tmdb.js";
 
 export default function Home() {
 
+    const [loading, setLoading] = useState(true);
+    const [movies, setMovies] = useState([]);
 
+    useEffect(() => {
+        async function load() {
+            const data = await testTmdb();
+            if (data) setMovies(data);
+            setLoading(false);
+        }
+        load();
+    }, []);
 
 
 
@@ -35,6 +47,37 @@ export default function Home() {
                         <TrendingUp className="w-6 h-6 text-primary" />
                         <h2 className="text-3xl font-bold text-foreground">Trending Movies</h2>
                     </div>
+                    {loading && (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin w-10 h-10 text-primary" />
+                        </div>
+                    )}
+
+                    {!loading && movies.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            {movies.slice(0, 10).map((movie) => (
+                                <div
+                                    key={movie.id}
+                                    className="rounded-xl overflow-hidden bg-card shadow hover:scale-105 transition"
+                                >
+                                    <img
+                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                        alt={movie.title}
+                                        className="w-full h-[300px] object-cover"
+                                    />
+
+                                    <div className="p-4">
+                                        <h3 className="font-semibold line-clamp-1">
+                                            {movie.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            ⭐ {movie.vote_average.toFixed(1)}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* Trending People */}
