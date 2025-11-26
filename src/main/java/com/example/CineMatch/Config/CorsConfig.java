@@ -1,24 +1,24 @@
 package com.example.CineMatch.Config;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@Configuration
-public class CorsConfig {
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+import java.io.IOException;
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
+@Component
+public class CorsConfig implements Filter {
 
-                registry.addMapping("/*")
-                        .allowedOrigins("http://localhost:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("")
-                        .allowCredentials(true);
-            }
-        };
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+            throws IOException, ServletException {
+
+        HttpServletResponse response = (HttpServletResponse) res;
+
+        response.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "");
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+
+        chain.doFilter(req, res);
     }
 }
