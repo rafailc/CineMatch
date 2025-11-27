@@ -32,7 +32,7 @@ public class MovieController {
     // Sends one page worth of Trending Actors & Directors
     // http://localhost:8080/api/tmdb/trending/person?page=1
     @GetMapping("/trending/person")
-    public Object getTrendingPeople(@RequestParam(defaultValue = "1") int page) {
+    public Object getTrendingPerson(@RequestParam(defaultValue = "1") int page) {
         return movieService.getTrendingPerson(page);
     }
 
