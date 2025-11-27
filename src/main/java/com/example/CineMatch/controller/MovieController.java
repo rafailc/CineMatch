@@ -22,6 +22,20 @@ public class MovieController {
         return movieService.getTrendingMovies(page);
     }
 
+    // Sends one page worth of Trending TV Series
+    // http://localhost:8080/api/tmdb/trending/tv?page=1
+    @GetMapping("/trending/tv")
+    public Object getTrendingTv(@RequestParam(defaultValue = "1") int page) {
+        return movieService.getTrendingTv(page);
+    }
+
+    // Sends one page worth of Trending Actors & Directors
+    // http://localhost:8080/api/tmdb/trending/person?page=1
+    @GetMapping("/trending/person")
+    public Object getTrendingPeople(@RequestParam(defaultValue = "1") int page) {
+        return movieService.getTrendingPerson(page);
+    }
+
     // Returns the full details on a specific Movie
     // http://localhost:8080/api/tmdb/movie/ [ID NUMBER]
     @GetMapping("/movie/{id}")

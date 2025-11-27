@@ -16,12 +16,6 @@ public class MovieServiceImpl implements MovieService {
         this.tmdbRepository = tmdbRepository;
     }
 
-    // Request a page's worth of trending movies from Tmdb Repository
-    @Override
-    public String getTrendingMovies(int page) {
-        return tmdbRepository.call("/trending/movie/week?page=" + page);
-    }
-
     // Maps full data for one movie (of a given id) from Tmdb Repository
     @Override
     public Map<String, Object> getMovieById(long id) {
@@ -29,5 +23,24 @@ public class MovieServiceImpl implements MovieService {
         Map<String, Object> credits = tmdbRepository.callMap("/movie/" + id + "/credits");
         details.put("credits", credits);
         return details;
+    }
+
+    // Request a page's worth of trending movies from Tmdb Repository
+    @Override
+    public String getTrendingMovies(int page) {
+        return tmdbRepository.call("/trending/movie/week?page=" + page);
+    }
+
+    // Request a page's worth of trending TV series
+    @Override
+    public String getTrendingTv(int page) {
+        return tmdbRepository.call("/trending/tv/week?page=" + page);
+    }
+
+    // Request a page's worth of trending Actors & Director
+    @Override
+    public String getTrendingPerson(int page) {
+        return tmdbRepository.call("/trending/person/week?page=" + page);
+
     }
 }
