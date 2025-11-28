@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "../components/ui/card";
 import { Star } from "lucide-react";
 
 export function MovieCard({ title, posterPath, rating, releaseDate, onClick }) {
