@@ -1,25 +1,46 @@
 package com.example.CineMatch.service;
 
-import com.example.CineMatch.dto.MovieDTO;
+import com.example.CineMatch.Repository.TmdbRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;
+
+import java.util.Map;
 
 @Service
 public class MovieServiceImpl implements MovieService {
 
-    @Override
-    public List<MovieDTO> getTrendingMovies() {
-        // Empty - will be implemented when TMD API is connected
-        throw new UnsupportedOperationException("Not implemented yet");
+    private final TmdbRepository tmdbRepository;
+
+    @Autowired
+     public MovieServiceImpl(TmdbRepository tmdbRepository) {
+        this.tmdbRepository = tmdbRepository;
     }
 
+    // Maps full data for one movie (of a given id) from Tmdb Repository
     @Override
-    public MovieDTO getMovieById(String id) {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public Map<String, Object> getMovieById(long id) {
+        Map<String, Object> details = tmdbRepository.callMap("/movie/" + id);
+        Map<String, Object> credits = tmdbRepository.callMap("/movie/" + id + "/credits");
+        details.put("credits", credits);
+        return details;
     }
 
+    // Request a page's worth of trending movies from Tmdb Repository
     @Override
-    public List<MovieDTO> getMoviesByGenre(String genre) {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public String getTrendingMovies(int page) {
+        return tmdbRepository.call("/trending/movie/week?page=" + page);
+    }
+
+    // Request a page's worth of trending TV series
+    @Override
+    public String getTrendingTv(int page) {
+        return tmdbRepository.call("/trending/tv/week?page=" + page);
+    }
+
+    // Request a page's worth of trending Actors & Director
+    @Override
+    public String getTrendingPerson(int page) {
+        return tmdbRepository.call("/trending/person/week?page=" + page);
+
     }
 }

@@ -1,10 +1,10 @@
 package com.example.CineMatch.service;
 
-import com.example.CineMatch.dto.MovieDTO;
-import java.util.List;
+import java.util.Map;
 
 public interface MovieService {
-    List<MovieDTO> getTrendingMovies();
-    MovieDTO getMovieById(String id);
-    List<MovieDTO> getMoviesByGenre(String genre);
+    Map<String, Object> getMovieById(long id);
+    String getTrendingMovies(int page);
+    String getTrendingTv(int page);
+    String getTrendingPerson(int page);
 }

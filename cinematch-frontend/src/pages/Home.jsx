@@ -1,16 +1,26 @@
 import { Loader2, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import { testTmdb } from "../lib/test_tmdb.js";
+import { getTrendingMovies,getMovieDetails, getTrendingTv, getTrendingPerson } from "../lib/tmdbBackend.js";
 
 export default function Home() {
 
     const [loading, setLoading] = useState(true);
     const [movies, setMovies] = useState([]);
+    const [tv, setTv] = useState([]);
+    const [person, setPerson] = useState([]);
 
     useEffect(() => {
         async function load() {
-            const data = await testTmdb();
-            if (data) setMovies(data);
+            const [movieData, tvData, personData] = await Promise.all([
+                getTrendingMovies(1),
+            getTrendingTv(1),
+            getTrendingPerson(1),
+            ]);
+
+            if (movieData?.results) setMovies(movieData.results);
+            if (tvData?.results) setTv(tvData.results);
+            if (personData?.results) setPerson(personData.results);
+
             setLoading(false);
         }
         load();
@@ -80,6 +90,46 @@ export default function Home() {
                     )}
                 </section>
 
+                {/* Trending TV */}
+                <section className="container mx-auto px-4 py-12">
+                    <div className="flex items-center gap-3 mb-8">
+                        <TrendingUp className="w-6 h-6 text-secondary" />
+                        <h2 className="text-3xl font-bold text-foreground">Trending TV Series</h2>
+                    </div>
+
+                    {loading && (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin w-10 h-10 text-primary" />
+                        </div>
+                    )}
+
+                    {!loading && tv.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            {tv.slice(0, 10).map((show) => (
+                                <div
+                                    key={show.id}
+                                    className="rounded-xl overflow-hidden bg-card shadow hover:scale-105 transition"
+                                >
+                                    <img
+                                        src={`https://image.tmdb.org/t/p/w500${show.poster_path}`}
+                                        alt={show.name}
+                                        className="w-full h-[300px] object-cover"
+                                    />
+
+                                    <div className="p-4">
+                                        <h3 className="font-semibold line-clamp-1">
+                                            {show.name}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            ⭐ {show.vote_average.toFixed(1)}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
                 {/* Trending People */}
                 <section className="container mx-auto px-4 py-12">
                     <div className="flex items-center gap-3 mb-8">
@@ -88,6 +138,35 @@ export default function Home() {
                             Trending Actors & Directors
                         </h2>
                     </div>
+
+                    {loading && (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin w-10 h-10 text-primary" />
+                        </div>
+                    )}
+
+                    {!loading && person.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                            {person.slice(0, 12).map((person) => (
+                                <div
+                                    key={person.id}
+                                    className="rounded-xl overflow-hidden bg-card shadow hover:scale-105 transition text-center p-4"
+                                >
+                                    <img
+                                        src={`https://image.tmdb.org/t/p/w500${person.profile_path}`}
+                                        alt={person.name}
+                                        className="w-full h-[250px] object-cover rounded-lg mb-3"
+                                    />
+
+                                    <h3 className="font-semibold line-clamp-1">{person.name}</h3>
+
+                                    <p className="text-sm text-muted-foreground">
+                                        ⭐ Popularity: {person.popularity.toFixed(0)}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
             </div>
         </>
