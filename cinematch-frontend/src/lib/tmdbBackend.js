@@ -68,3 +68,17 @@ export async function searchTv(query, page = 1) {
     return fetch(`${API_BASE}/search/tv?q=${encodeURIComponent(query)}&page=${page}`)
         .then(res => res.json());
 }
+
+/* -----------------------------
+   DISCOVER
+----------------------------- */
+
+export function discoverMovies(queryString) {
+    return fetch(`${API_BASE}/discover/movies${queryString}`)
+        .then(res => res.json());
+}
+
+export function discoverTV(queryString) {
+    return fetch(`${API_BASE}/discover/tv${queryString}`)
+        .then(res => res.json());
+}
