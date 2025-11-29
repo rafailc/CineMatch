@@ -3,6 +3,7 @@ package com.example.CineMatch.controller;
 import com.example.CineMatch.service.MovieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tmdb")
@@ -58,4 +59,28 @@ public class MovieController {
     public Object searchPeople(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
         return movieService.searchPerson(q, page);
     }
+
+    /* Discover */
+    @GetMapping("/discover/movies")
+    public Object discoverMovies(@RequestParam Map<String, String> params) {
+        StringBuilder query = new StringBuilder("?");
+
+        params.forEach((key, value) -> {
+            query.append(key).append("=").append(value).append("&");
+        });
+
+        return movieService.discoverMovies(query.toString());
+    }
+
+    @GetMapping("/discover/tv")
+    public Object discoverTV(@RequestParam Map<String, String> params) {
+        StringBuilder query = new StringBuilder("?");
+
+        params.forEach((key, value) -> {
+            query.append(key).append("=").append(value).append("&");
+        });
+
+        return movieService.discoverTV(query.toString());
+    }
+
 }

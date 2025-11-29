@@ -10,4 +10,6 @@ public interface MovieService {
     String searchMovies(String q, int page);
     String searchTv(String q, int page);
     String searchPerson(String q, int page);
+    Map<String, Object> discoverMovies(String q);
+    Map<String, Object> discoverTV(String q);
 }

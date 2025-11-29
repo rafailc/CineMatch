@@ -49,4 +49,15 @@ public class MovieServiceImpl implements MovieService {
     public String searchMovies(String q, int page) { return tmdbRepository.call("/search/movie?query=" + q + "&page=" + page); }
     public String searchPerson(String q, int page) { return tmdbRepository.call("/search/person?query=" + q + "&page=" + page); }
     public String searchTv(String q, int page) { return tmdbRepository.call("/search/tv?query=" + q + "&page=" + page); }
+
+    // DISVOCER
+
+    public Map<String, Object> discoverMovies(String q) {
+        return tmdbRepository.callMap("/discover/movie" + q);
+    }
+
+    public Map<String, Object> discoverTV(String q) {
+        return tmdbRepository.callMap("/discover/tv" + q);
+    }
+
 }
