@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import ProtectedRoute from "./ProtectedRoute";
 import Navigation from "./components/Navigation";
+import SearchPage from "./pages/SearchPage";
 
 
 export default function App() {
@@ -25,6 +26,15 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <Home />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/search"
+                    element={
+                        <ProtectedRoute>
+                            <SearchPage />
                         </ProtectedRoute>
                     }
                 />

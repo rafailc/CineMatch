@@ -52,3 +52,19 @@ export async function getMovieDetails(id) {
 
     return data;
 }
+
+
+export async function searchMovies(query, page = 1) {
+    return fetch(`${API_BASE}/search/movies?q=${encodeURIComponent(query)}&page=${page}`)
+        .then(res => res.json());
+}
+
+export async function searchPerson(query, page = 1) {
+    return fetch(`${API_BASE}/search/people?q=${encodeURIComponent(query)}&page=${page}`)
+        .then(res => res.json());
+}
+
+export async function searchTv(query, page = 1) {
+    return fetch(`${API_BASE}/search/tv?q=${encodeURIComponent(query)}&page=${page}`)
+        .then(res => res.json());
+}
