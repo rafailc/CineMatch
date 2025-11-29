@@ -1,0 +1,25 @@
+.year-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #1f1f27;
+    border: 1px solid #2d2d36;
+    border-radius: 8px;
+    font-size: 15px;
+    color: white;
+    transition: 0.25s ease-in-out;
+    outline: none;
+}
+
+.year-input::placeholder {
+    color: #6b6b78;
+}
+
+.year-input:hover {
+    border-color: #3a3f4e;
+}
+
+.year-input:focus {
+    border-color: #5865f2;
+    box-shadow: 0 0 4px #5865f2;
+    background: #23232d;
+}
