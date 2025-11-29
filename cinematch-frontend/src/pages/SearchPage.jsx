@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Search, Loader2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { getTrendingMovies, getTrendingPerson, getTrendingTv } from "../lib/tmdbBackend";
-
+import FiltersSidebar from "../components/FiltersSidebar";
 import SeriesCard from "../components/SeriesCard";
-
+import { discoverMovies, discoverTV } from "../lib/tmdbBackend";
 
 
 
@@ -28,7 +28,17 @@ export default function SearchPage() {
     const [tvTotal, setTvTotal] = useState(0);
     const [activeTab, setActiveTab] = useState("movies");
 
+    const [filters, setFilters] = useState({
+        genre: "",
+        rating: 0,
+        year: ""
+    });
 
+    const [tvFilters, setTvFilters] = useState({
+        genre: "",
+        rating: 0,
+        year: ""
+    });
 
 
     useEffect(() => {
@@ -98,6 +108,111 @@ export default function SearchPage() {
         }
     }
 
+    async function applyFilters (newFilters) {
+
+
+        const noFilters =
+            (!newFilters.genre || newFilters.genre === "") &&
+            (!newFilters.year || newFilters.year === "") &&
+            newFilters.rating === 0;
+
+        if (noFilters) {
+            await loadDefault();
+            return;
+        }
+
+
+        const { genre, rating, year } = newFilters;
+
+        const GENRES = {
+            Action: 28,
+            Adventure: 12,
+            Animation: 16,
+            Comedy: 35,
+            Crime: 80,
+            Documentary: 99,
+            Drama: 18,
+            Family: 10751,
+            Fantasy: 14,
+            History: 36,
+            Horror: 27,
+            Music: 10402,
+            Mystery: 9648,
+            Romance: 10749,
+            ScienceFiction: 878,
+            Thriller: 53,
+            War: 10752,
+            Western: 37
+        };
+
+
+        setLoading(true);
+
+        let query = `?sort_by=popularity.desc&page=1`;
+
+        if (genre && GENRES[genre]) query += `&with_genres=${GENRES[genre]}`;
+        if (rating > 0) query += `&vote_average.gte=${rating}`;
+        if (year?.length === 4) query += `&primary_release_year=${year}`;
+
+        const data = await discoverMovies(query);
+
+        setMovies(data.results ?? []);
+        setMovieTotal(Math.min(data.total_results ?? 0, 10000));
+
+        // Filters affect only movies → clear people
+        setPeople([]);
+        setPeopleTotal(0);
+
+        setTotalPages(data.total_pages ?? 1);
+
+        setLoading(false);
+    }
+
+    async function applyTVFilters(newFilters) {
+
+        const noFilters =
+            (!newFilters.genre || newFilters.genre === "") &&
+            (!newFilters.year || newFilters.year === "") &&
+            newFilters.rating === 0;
+
+        if (noFilters) {
+            await loadDefault();
+            return;
+        }
+
+        const TV_GENRES = {
+            "Action & Adventure": 10759,
+            Animation: 16,
+            Comedy: 35,
+            Crime: 80,
+            Documentary: 99,
+            Drama: 18,
+            Family: 10751,
+            Kids: 10762,
+            Mystery: 9648,
+            News: 10763,
+            Reality: 10764,
+            "Sci-Fi & Fantasy": 10765,
+            Soap: 10766,
+            Talk: 10767,
+            "War & Politics": 10768
+        };
+
+        const { genre, rating, year } = newFilters;
+
+        let query = `?sort_by=popularity.desc&page=1`;
+
+        if (genre && TV_GENRES[genre]) query += `&with_genres=${TV_GENRES[genre]}`;
+        if (rating > 0) query += `&vote_average.gte=${rating}`;
+        if (year?.length === 4) query += `&first_air_date_year=${year}`;
+
+        const data = await discoverTV(query);
+
+        setTV(data?.results ?? []);
+        setTvTotal(Math.min(data?.total_results ?? 0, 10000));
+        setTotalPages(data?.total_pages ?? 1);
+    }
+
 
 
     return (
@@ -141,6 +256,19 @@ export default function SearchPage() {
                         <TabsContent value="movies">
                             <div className="relative">
 
+                                {/* FIXED LEFT FILTER SIDEBAR */}
+                                <div className="hidden lg:block fixed left-8 top-45 z-20">
+                                    <FiltersSidebar
+                                        filters={filters}
+                                        mode="movie"
+                                        onFilterChange={(updatedFilters) => {
+                                            setFilters(updatedFilters);
+                                            applyFilters(updatedFilters);
+                                        }}
+                                    />
+                                </div>
+
+
 
                                 {/* MOVIE GRID –  */}
                                 <div className="lg:ml-0">
@@ -165,6 +293,18 @@ export default function SearchPage() {
                         <TabsContent value="tv">
                             <div className="relative">
 
+
+                                {/* TV Filters Sidebar */}
+                                <div className="hidden lg:block fixed left-8 top-45 z-20">
+                                    <FiltersSidebar
+                                        filters={tvFilters}
+                                        mode="tv"
+                                        onFilterChange={(updatedFilters) => {
+                                            setTvFilters(updatedFilters);
+                                            applyTVFilters(updatedFilters);
+                                        }}
+                                    />
+                                </div>
 
 
                                 {/* TV GRID */}
