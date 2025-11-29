@@ -7,4 +7,7 @@ public interface MovieService {
     String getTrendingMovies(int page);
     String getTrendingTv(int page);
     String getTrendingPerson(int page);
+    String searchMovies(String q, int page);
+    String searchTv(String q, int page);
+    String searchPerson(String q, int page);
 }
