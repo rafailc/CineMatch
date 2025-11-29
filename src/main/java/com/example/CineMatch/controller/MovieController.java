@@ -42,4 +42,20 @@ public class MovieController {
     public Object getMovieById(@PathVariable long id) {
         return movieService.getMovieById(id);
     }
+
+    /* Search */
+    @GetMapping("/search/movies")
+    public Object searchMovies(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+        return movieService.searchMovies(q, page);
+    }
+
+    @GetMapping("/search/tv")
+    public Object searchTV(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+        return movieService.searchTv(q, page);
+    }
+
+    @GetMapping("/search/people")
+    public Object searchPeople(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+        return movieService.searchPerson(q, page);
+    }
 }

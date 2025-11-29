@@ -43,4 +43,10 @@ public class MovieServiceImpl implements MovieService {
         return tmdbRepository.call("/trending/person/week?page=" + page);
 
     }
+
+     // SEARCH
+
+    public String searchMovies(String q, int page) { return tmdbRepository.call("/search/movie?query=" + q + "&page=" + page); }
+    public String searchPerson(String q, int page) { return tmdbRepository.call("/search/person?query=" + q + "&page=" + page); }
+    public String searchTv(String q, int page) { return tmdbRepository.call("/search/tv?query=" + q + "&page=" + page); }
 }
