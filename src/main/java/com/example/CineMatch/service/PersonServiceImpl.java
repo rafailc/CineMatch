@@ -7,39 +7,40 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class MovieServiceImpl implements TmdbService {
+public class PersonServiceImpl implements TmdbService {
 
     private final TmdbRepository tmdbRepository;
 
     @Autowired
-     public MovieServiceImpl(TmdbRepository tmdbRepository) {
+     public PersonServiceImpl(TmdbRepository tmdbRepository) {
         this.tmdbRepository = tmdbRepository;
     }
 
     // TRENDING
     @Override
     public String getTrending(int page) {
-        return tmdbRepository.call("/trending/movie/week?page=" + page);
+        return tmdbRepository.call("/trending/person/week?page=" + page);
     }
 
     // SEARCH
     @Override
     public String getSearch(String q, int page) {
-        return tmdbRepository.call("/search/movie?query=" + q + "&page=" + page);
+        return tmdbRepository.call("/search/person?query=" + q + "&page=" + page);
     }
 
     // DISCOVER
+    // Note: Currently unused
     @Override
     public Map<String, Object> getDiscover(String q) {
-        return tmdbRepository.callMap("/discover/movie" + q);
+        return tmdbRepository.callMap("/discover/person" + q);
     }
 
-   // DETAILS
+    // DETAILS
     @Override
     public Map<String, Object> getDetails(long id) {
-        Map<String, Object> details = tmdbRepository.callMap("/movie/" + id);
-        Map<String, Object> credits = tmdbRepository.callMap("/movie/" + id + "/credits");
-        details.put("credits", credits);
+        Map<String, Object> details = tmdbRepository.callMap("/person/" + id);
+        Map<String, Object> credits = tmdbRepository.callMap("/person/" + id + "/movie_credits");
+        details.put("movie_credits", credits);
         return details;
     }
 }
