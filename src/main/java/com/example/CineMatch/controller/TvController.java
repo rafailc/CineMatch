@@ -4,34 +4,35 @@ import com.example.CineMatch.service.TmdbService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tmdb")
-public class MovieController {
+public class TvController {
 
     private final TmdbService tmdbService;
 
     @Autowired
-    public MovieController(@Qualifier("movieServiceImpl") TmdbService tmdbService) {
+    public TvController(@Qualifier("tvServiceImpl") TmdbService tmdbService) {
         this.tmdbService = tmdbService;
     }
 
     /* Trending */
-    @GetMapping("/trending/movies")
-    public Object getTrendingMovies(@RequestParam(defaultValue = "1") int page) {
+    @GetMapping("/trending/tv")
+    public Object getTrendingTv(@RequestParam(defaultValue = "1") int page) {
         return tmdbService.getTrending(page);
     }
 
     /* Search */
-    @GetMapping("/search/movies")
-    public Object searchMovies(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+    @GetMapping("/search/tv")
+    public Object searchTV(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
         return tmdbService.getSearch(q, page);
     }
 
     /* Discover */
-    @GetMapping("/discover/movies")
-    public Object discoverMovies(@RequestParam Map<String, String> params) {
+    @GetMapping("/discover/tv")
+    public Object discoverTV(@RequestParam Map<String, String> params) {
         StringBuilder query = new StringBuilder("?");
         params.forEach((key, value) -> {
             query.append(key).append("=").append(value).append("&");
@@ -40,8 +41,8 @@ public class MovieController {
     }
 
     /* Details */
-    @GetMapping("/movie/{id}")
-    public Object movieDetails(@PathVariable long id) {
+    @GetMapping("/series/{id}")
+    public Object seriesDetails(@PathVariable long id) {
         return tmdbService.getDetails(id);
     }
 }
