@@ -4,6 +4,7 @@ import { getTrendingMovies,getMovieDetails, getTrendingTv, getTrendingPerson } f
 import { MovieCard } from "../components/MovieCard.jsx";
 import  SeriesCard  from "../components/SeriesCard.jsx";
 import { PersonCard } from "../components/PersonCard.jsx";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
 
@@ -11,6 +12,7 @@ export default function Home() {
     const [movies, setMovies] = useState([]);
     const [tv, setTv] = useState([]);
     const [person, setPerson] = useState([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         async function load() {
@@ -125,6 +127,18 @@ export default function Home() {
                         ))}
                     </div>
                 </section>
+                <div className="w-full flex justify-center py-10 mt-12">
+                    <button
+                        onClick={() => navigate("/about")}
+                        className="px-5 py-2 text-sm rounded-lg
+                   bg-white/10 backdrop-blur-md
+                   text-gray-200 border border-white/20
+                   hover:bg-white/20 transition"
+                    >
+                        About Us
+                    </button>
+                </div>
+
             </div>
         </>
     );

@@ -4,7 +4,10 @@ import Home from "./pages/Home";
 import ProtectedRoute from "./ProtectedRoute";
 import Navigation from "./components/Navigation";
 import SearchPage from "./pages/SearchPage";
-
+import MovieDetailsPage from "./pages/MovieDetails";
+import PersonDetailsPage from "./pages/PersonDetails";
+import TvDetailPage from "./pages/TvDetails";
+import AboutUsPage from "./pages/About";
 
 export default function App() {
     const location = useLocation();
@@ -35,6 +38,41 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <SearchPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/movie/:id"
+                    element={
+                        <ProtectedRoute>
+                            <MovieDetailsPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/series/:id"
+                    element={
+                        <ProtectedRoute>
+                            <TvDetailPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/person/:id"
+                    element={
+                        <ProtectedRoute>
+                            <PersonDetailsPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/about"
+                    element={
+                        <ProtectedRoute>
+                            <AboutUsPage />
                         </ProtectedRoute>
                     }
                 />
