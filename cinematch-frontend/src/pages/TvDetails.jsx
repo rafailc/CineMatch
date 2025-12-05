@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { getTvDetails } from "../lib/tmdbBackend";
 import { PersonCard } from "../components/PersonCard";
+import FavoriteToggle from "../components/FavoriteToggle";
 
 export default function TvDetailPage() {
     const { id } = useParams();
@@ -87,7 +88,18 @@ export default function TvDetailPage() {
 
                     {/* INFO CONTENT */}
                     <div className="max-w-3xl">
-                        <h1 className="text-5xl font-bold mb-4">{series.name}</h1>
+                        <div className="flex items-center justify-between mb-4">
+                            <h1 className="text-5xl font-bold">{series.name}</h1>
+
+                            <FavoriteToggle
+                                item={{
+                                    id: series.id,
+                                    name: series.name,
+                                    genres: series.genres,
+                                    media_type: "tv"
+                                }}
+                            />
+                        </div>
 
                         {/* Rating + Year */}
                         <p className="text-muted-foreground mb-4 text-lg">

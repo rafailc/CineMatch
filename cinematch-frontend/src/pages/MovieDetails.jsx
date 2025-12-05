@@ -6,6 +6,8 @@ import { Card } from "../components/ui/card";
 import { PersonCard } from "../components/PersonCard";
 import { Loader2, Star, TrendingUp, DollarSign, Clock, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import {supabase} from "@/lib/supabase.js";
+import FavoriteToggle from "../components/FavoriteToggle";
 
 export default function MovieDetailsPage() {
     const { id } = useParams();
@@ -31,7 +33,6 @@ export default function MovieDetailsPage() {
             setLoading(false);
         }
     }
-
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background pt-16">
@@ -111,9 +112,20 @@ export default function MovieDetailsPage() {
                     <div className="flex-1 max-w-3xl">
 
                         {/* TITLE */}
-                        <h1 className="text-5xl font-bold mb-4 text-foreground">
-                            {movie.title}
-                        </h1>
+                        <div className="flex items-center justify-between">
+                            <h1 className="text-5xl font-bold mb-4 text-foreground">
+                                {movie.title}
+                            </h1>
+
+                            <FavoriteToggle
+                                item={{
+                                    id: movie.id,
+                                    title: movie.title,
+                                    genres: movie.genres,
+                                    media_type: "movie"
+                                }}
+                            />
+                        </div>
 
                         {/* GENRES */}
                         <div className="flex flex-wrap gap-2 mb-4">
