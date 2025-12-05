@@ -134,3 +134,14 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* REMOVE SCROLLBAR APO CAROUSEL*/
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}

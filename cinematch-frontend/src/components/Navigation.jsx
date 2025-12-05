@@ -2,6 +2,7 @@ import { Film, Search, Brain, Sparkles, MessageSquare, LogOut } from "lucide-rea
 import NavLink from "../components/NavLink.jsx";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Heart } from "lucide-react";
 
 
 export default function Navigation() {
@@ -54,6 +55,13 @@ export default function Navigation() {
 
                     {/* DEJIA / LOGOUT BUTTON  */}
                     <div className="absolute right-0 flex items-center">
+                        <button
+                            onClick={() => navigate("/favorites")}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-200 mr-2"
+                        >
+                            <Heart className="w-4 h-4 text-red-500" />
+                            <span className="hidden sm:inline">Favorites</span>
+                        </button>
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all"
