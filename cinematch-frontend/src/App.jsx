@@ -8,7 +8,6 @@ import MovieDetailsPage from "./pages/MovieDetails";
 import PersonDetailsPage from "./pages/PersonDetails";
 import TvDetailPage from "./pages/TvDetails";
 import AboutUsPage from "./pages/About";
-import QuizPage from "@/pages/QuizPage.jsx";
 import FavoritesPage from "./pages/FavoritesPage";
 
 export default function App() {
@@ -79,14 +78,6 @@ export default function App() {
                     }
                 />
 
-                <Route
-                    path="/quiz"
-                    element={
-                        <ProtectedRoute>
-                            <QuizPage />
-                        </ProtectedRoute>
-                    }
-                />
 
                 <Route
                     path="/favorites"
