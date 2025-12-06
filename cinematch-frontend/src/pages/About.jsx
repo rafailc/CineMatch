@@ -1,6 +1,6 @@
 import React from "react";
 import ProfileCard from "../components/ProfileCard";
-import "../styles/About.css";
+import "../styles/about.css";
 
 export default function AboutUsPage() {
 
