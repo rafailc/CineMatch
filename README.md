@@ -10,8 +10,9 @@ How to Run the CineMatch App:
   SUPABASE_SERVICE_KEY=your_service_role_key_here
   SUPABASE_PASSWORD=your_database_password_here
   TMDB_API_KEY=YOUR_TMDB_API_KEY
+  HUGGINGFACE_API_KEY=YOUR_HUGGINGFACE_API_KEY
 
-3. Import the .env files in Spring Boot (for IntelliJ)
+4. Import the .env files in Spring Boot (for IntelliJ)
 
 Go to: Run → Edit Configurations…
 
