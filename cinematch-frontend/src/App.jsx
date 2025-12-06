@@ -9,6 +9,7 @@ import PersonDetailsPage from "./pages/PersonDetails";
 import TvDetailPage from "./pages/TvDetails";
 import AboutUsPage from "./pages/About";
 import FavoritesPage from "./pages/FavoritesPage";
+import ProfilePage from "@/pages/PrifilePage.jsx";
 
 export default function App() {
     const location = useLocation();
@@ -78,6 +79,14 @@ export default function App() {
                     }
                 />
 
+                <Route
+                    path="/profile"
+                    element={
+                        <ProtectedRoute>
+                            <ProfilePage />
+                        </ProtectedRoute>
+                    }
+                />
 
                 <Route
                     path="/favorites"
