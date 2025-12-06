@@ -24,7 +24,7 @@ jobs:
       - name: Build & push backend
         uses: docker/build-push-action@v5
         with:
-          context: ./CineMatch
+          context: .
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/cinematch-backend:latest
@@ -33,7 +33,7 @@ jobs:
       - name: Build & push frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./CineMatch/cinematch-frontend
+          context: ./cinematch-frontend
           file: ./cinematch-frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/cinematch-frontend:latest
