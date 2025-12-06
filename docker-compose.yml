@@ -1,0 +1,23 @@
+services:
+  frontend:
+    build: ./cinematch-frontend
+    container_name: react-nginx
+    environment:
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+    ports:
+      - "5173:80"
+
+  spring-application:
+    build: .
+    container_name: spring-app-cinematch
+    environment:
+      SPRING_DATASOURCE_URL: ${SUPABASE_URL}
+      SPRING_DATASOURCE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      SPRING_DATASOURCE_PASSWORD: ${SUPABASE_PASSWORD}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+    ports:
+      - "8080:8080"
