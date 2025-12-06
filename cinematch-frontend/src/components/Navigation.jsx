@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import {useEffect, useState} from "react";
 import {supabase} from "@/lib/supabase.js";
+import PreferencesModal from "../components/PreferencesModal";
 
 
 export default function Navigation() {
@@ -12,6 +13,7 @@ export default function Navigation() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [prefOpen, setPrefOpen] = useState(false);
 
     async function handleLogout() {
         await signOut();
@@ -205,9 +207,12 @@ export default function Navigation() {
                                         <span className="font-medium">Favorites</span>
                                     </button>
 
-                                    {/* Settings */}
+                                    {/* Preferences */}
                                     <button
-                                        onClick={() => navigate("/preferences")}
+                                        onClick={() => {
+                                            setPrefOpen(true);
+                                            setMenuOpen(false);
+                                        }}
                                         className="
         group w-full flex items-center px-4 py-3
         hover:bg-white/5 transition text-gray-100
@@ -266,6 +271,11 @@ export default function Navigation() {
 
                 </div>
             </div>
+            <PreferencesModal
+                open={prefOpen}
+                onClose={() => setPrefOpen(false)}
+                user={user}
+            />
         </nav>
     );
 }
