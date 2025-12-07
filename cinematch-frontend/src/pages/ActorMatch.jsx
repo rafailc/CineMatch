@@ -6,7 +6,7 @@ import { Sparkles, Upload, Camera, X, Loader2, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTrendingPerson } from "@/lib/tmdbBackend";
 import { cosineSimilarity } from "@/lib/ai-utils";
-import { pipeline, env } from "@huggingface/transformers";
+import { pipeline, env } from "@xenova/transformers";
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
