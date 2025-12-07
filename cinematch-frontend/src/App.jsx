@@ -11,13 +11,13 @@ import AboutUsPage from "./pages/About";
 import FavoritesPage from "./pages/FavoritesPage";
 import ProfilePage from "@/pages/PrifilePage.jsx";
 
+import ActorMatchPage from "./pages/ActorMatch";
+
 export default function App() {
     const location = useLocation();
 
     const hideNavbarRoutes = ["/login"];
     const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
-
-
 
     return (
         <>
@@ -43,6 +43,7 @@ export default function App() {
                         </ProtectedRoute>
                     }
                 />
+
                 <Route
                     path="/movie/:id"
                     element={
@@ -93,6 +94,15 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <FavoritesPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/actor-match"
+                    element={
+                        <ProtectedRoute>
+                            <ActorMatchPage />
                         </ProtectedRoute>
                     }
                 />

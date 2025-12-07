@@ -28,7 +28,7 @@ export async function getTrendingTv(page = 1) {
 }
 
 export async function getTrendingPerson(page = 1) {
-    console.log("➡ Calling backend: /trending/tv?page=" + page);
+    console.log("➡ Calling backend: /trending/person?page=" + page);
 
     const res = await fetch(`${API_BASE}/trending/person?page=${page}`);
     console.log("⬅ Backend responded with status:", res.status);
