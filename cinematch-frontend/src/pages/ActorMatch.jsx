@@ -2,23 +2,46 @@ import { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Upload, Camera, X, Loader2, User } from "lucide-react";
+import { Sparkles, Upload, Camera, X, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTrendingPerson } from "@/lib/tmdbBackend";
 import { cosineSimilarity } from "@/lib/ai-utils";
-const { pipeline } = await import("@xenova/transformers");
-
+import { pipeline, env } from "@xenova/transformers";
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
+// Base URL of your Spring backend TMDB API
+const API_BASE = "http://localhost:8080/api/tmdb";
+
+// Helper: make sure profile_path always starts with "/"
+function cleanPath(path) {
+    if (!path) return "";
+    return path.startsWith("/") ? path : "/" + path;
+}
+
+/**
+ * Load image (from our backend proxy) and convert to Base64 for the extractor.
+ * IMPORTANT: This does NOT use fetch(), it uses <img> + canvas
+ */
 async function loadImageAsBase64(url) {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous"; // allowed because backend adds CORS
+        img.src = url;
+
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            resolve(canvas.toDataURL("image/jpeg"));
+        };
+
+        img.onerror = () => reject("Failed to load image at " + url);
     });
 }
 
@@ -107,56 +130,76 @@ export default function ActorMatchPage() {
         setResults(null);
 
         try {
+            // 1. Load AI Model
             setProgressText("Φόρτωση AI μοντέλου...");
-            setProgress(15);
+            setProgress(10);
             const extractor = await getExtractor();
 
+            // 2. Analyze User Image
             setProgressText("Ανάλυση της φωτογραφίας σου...");
-            setProgress(35);
+            setProgress(20);
             const userFeatures = await extractor(uploadedImage);
             const userEmbedding = Array.from(userFeatures.data);
 
-            setProgressText("Λήψη δεδομένων ηθοποιών...");
-            setProgress(55);
-            const trendingData = await getTrendingPerson();
-            const people = trendingData.results || [];
+            // 3. Fetch Multiple Pages of Actors (e.g., 5 Pages = 100 Actors)
+            setProgressText("Λήψη λίστας διάσημων ηθοποιών...");
+            setProgress(30);
 
-            const actors = people
-                .filter(
-                    (p) =>
-                        p.known_for_department === "Acting" &&
-                        p.profile_path &&
-                        p.popularity > 1
-                )
-                .slice(0, 20);
+            const pagesToFetch = [1, 2, 3, 4, 5]; // Fetch top 100 trending
+            let allPeople = [];
 
-            if (actors.length === 0) {
+            // We use Promise.all to fetch pages in parallel for speed
+            const pagePromises = pagesToFetch.map(page => getTrendingPerson(page));
+            const pagesResults = await Promise.all(pagePromises);
+
+            pagesResults.forEach(data => {
+                if (data.results) {
+                    allPeople = [...allPeople, ...data.results];
+                }
+            });
+
+            // Filter valid actors (must have image, be actors, etc.)
+            const actors = allPeople.filter(
+                (p) =>
+                    p.known_for_department === "Acting" &&
+                    p.profile_path &&
+                    p.popularity > 1 // Ensure they are somewhat known
+            );
+
+            // Remove duplicates (sometimes an actor appears on multiple pages/lists)
+            const uniqueActors = Array.from(new Map(actors.map(item => [item.id, item])).values());
+
+            // Limit total to analyze to avoid browser crash (e.g., 50 is a good balance)
+            const actorsToAnalyze = uniqueActors.slice(0, 50);
+
+            if (actorsToAnalyze.length === 0) {
                 throw new Error("Δεν βρέθηκαν αρκετοί ηθοποιοί για σύγκριση.");
             }
 
-            setProgressText("Σύγκριση με ηθοποιούς...");
-            setProgress(70);
+            // 4. Compare Loop
+            setProgressText(`Σύγκριση με ${actorsToAnalyze.length} ηθοποιούς...`);
 
             const actorResults = [];
-            const maxActors = Math.min(actors.length, 10);
 
-            for (let i = 0; i < maxActors; i++) {
-                const actor = actors[i];
-                const actorImageUrl =
-                    `https://api.allorigins.win/raw?url=` +
-                    encodeURIComponent(`https://image.tmdb.org/t/p/w500${actor.profile_path}`);
+            for (let i = 0; i < actorsToAnalyze.length; i++) {
+                const actor = actorsToAnalyze[i];
 
+                // Update progress bar dynamically
+                const percentComplete = 30 + Math.round(((i + 1) / actorsToAnalyze.length) * 60);
+                setProgress(percentComplete);
+                setProgressText(`Σύγκριση με ${actor.name} (${i + 1}/${actorsToAnalyze.length})...`);
+
+                const profilePath = cleanPath(actor.profile_path);
+                const actorImageUrl = `${API_BASE}/image?path=${profilePath}`;
 
                 try {
                     const base64ActorImage = await loadImageAsBase64(actorImageUrl);
+
+                    // Run AI extraction
                     const actorFeatures = await extractor(base64ActorImage);
                     const actorEmbedding = Array.from(actorFeatures.data);
 
-                    if (!actorEmbedding || actorEmbedding.length === 0) {
-                        console.warn("⚠ Actor embedding empty:", actor.name);
-                        continue;
-                    }
-
+                    if (!actorEmbedding || actorEmbedding.length === 0) continue;
 
                     const similarity = cosineSimilarity(userEmbedding, actorEmbedding);
 
@@ -165,21 +208,16 @@ export default function ActorMatchPage() {
                         similarity: Math.round(similarity * 100),
                     });
                 } catch (err) {
-                    console.warn(`Could not process actor ${actor.name}:`, err);
+                    // Fail silently for individual actors so one bad image doesn't stop the whole process
+                    console.warn(`Skipping ${actor.name}:`, err);
                 }
-
-                setProgress(70 + ((i + 1) / maxActors) * 25);
             }
 
+            // 5. Finalize
             setProgressText("Ολοκλήρωση αποτελεσμάτων...");
             const topMatches = actorResults
                 .sort((a, b) => b.similarity - a.similarity)
-                .slice(0, 5);
-
-            console.log("🔍 FULL actorResults:", actorResults);
-            console.log("🔍 TOP MATCHES:", topMatches);
-            console.log("🔍 RESULTS LENGTH:", topMatches.length);
-
+                .slice(0, 5); // Keep top 5 best matches
 
             setResults(topMatches);
             setProgress(100);
@@ -187,15 +225,13 @@ export default function ActorMatchPage() {
 
             toast({
                 title: "Η ανάλυση ολοκληρώθηκε!",
-                description: "Βρήκαμε τους ηθοποιούς που σου μοιάζουν περισσότερο.",
+                description: `Συγκρίναμε το πρόσωπό σου με ${actorsToAnalyze.length} διάσημους!`,
             });
         } catch (error) {
             console.error("Analysis error:", error);
             toast({
                 title: "Αποτυχία ανάλυσης",
-                description:
-                    error.message ||
-                    "Κάτι πήγε στραβά με την ανάλυση. Δοκίμασε ξανά σε λίγο.",
+                description: error.message || "Κάτι πήγε στραβά.",
                 variant: "destructive",
             });
         } finally {
@@ -296,7 +332,10 @@ export default function ActorMatchPage() {
                                         <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex-shrink-0">
                                             {actor.profile_path ? (
                                                 <img
-                                                    src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`}
+                                                    // for display we can use TMDB directly (no canvas)
+                                                    src={`https://image.tmdb.org/t/p/w185${cleanPath(
+                                                        actor.profile_path
+                                                    )}`}
                                                     alt={actor.name}
                                                     className="w-full h-full object-cover"
                                                 />
