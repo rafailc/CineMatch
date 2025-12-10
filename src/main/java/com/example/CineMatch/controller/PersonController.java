@@ -1,6 +1,6 @@
 package com.example.CineMatch.controller;
 
-import com.example.CineMatch.service.TmdbService;
+import com.example.CineMatch.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
@@ -14,29 +14,29 @@ import java.util.Map;
 @RequestMapping("/api/tmdb")
 public class PersonController {
 
-    private final TmdbService tmdbService;
+    private final PersonService personService;
 
     @Autowired
-    public PersonController(@Qualifier("personServiceImpl") TmdbService tmdbService) {
-        this.tmdbService = tmdbService;
+    public PersonController(PersonService personService) {
+        this.personService = personService;
     }
 
     /* Trending */
     @GetMapping("/trending/person")
     public Object getTrendingPerson(@RequestParam(defaultValue = "1") int page) {
-        return tmdbService.getTrending(page);
+        return personService.getTrending(page);
     }
 
     /* Search */
     @GetMapping("/search/people")
     public Object searchPeople(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
-        return tmdbService.getSearch(q, page);
+        return personService.getSearch(q, page);
     }
 
     /* Details */
     @GetMapping("/person/{id}")
     public Object personDetails(@PathVariable long id) {
-        return tmdbService.getDetails(id);
+        return personService.getDetails(id);
     }
 
     /* Image Proxy for AI Analysis */

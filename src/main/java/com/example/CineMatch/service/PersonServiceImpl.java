@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class PersonServiceImpl implements TmdbService {
+public class PersonServiceImpl implements PersonService {
 
     private final TmdbRepository tmdbRepository;
 
@@ -26,13 +26,6 @@ public class PersonServiceImpl implements TmdbService {
     @Override
     public String getSearch(String q, int page) {
         return tmdbRepository.call("/search/person?query=" + q + "&page=" + page);
-    }
-
-    // DISCOVER
-    // Note: Currently unused
-    @Override
-    public Map<String, Object> getDiscover(String q) {
-        return tmdbRepository.callMap("/discover/person" + q);
     }
 
     // DETAILS
