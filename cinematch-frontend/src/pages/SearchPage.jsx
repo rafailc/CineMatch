@@ -12,8 +12,6 @@ import FiltersSidebar from "../components/FiltersSidebar";
 import SeriesCard from "../components/SeriesCard";
 import { discoverMovies, discoverTV } from "../lib/tmdbBackend";
 
-
-
 export default function SearchPage() {
     const [query, setQuery] = useState("");
     const [movies, setMovies] = useState([]);
@@ -27,11 +25,14 @@ export default function SearchPage() {
     const [tv, setTV] = useState([]);
     const [tvTotal, setTvTotal] = useState(0);
     const [activeTab, setActiveTab] = useState("movies");
+    const [isFiltersVisible, setIsFiltersVisible] = useState(false);
 
     const [filters, setFilters] = useState({
         genre: "",
         rating: 0,
-        year: ""
+        year: "",
+        minRevenue: "",
+        maxRevenue: ""
     });
 
     const [tvFilters, setTvFilters] = useState({
@@ -39,7 +40,6 @@ export default function SearchPage() {
         rating: 0,
         year: ""
     });
-
 
     useEffect(() => {
         loadDefault(1);
@@ -72,17 +72,13 @@ export default function SearchPage() {
             setLoading(false);
         }
     }
-
-
-    // SEARCH HANDLER
-
+    {/* HANDLER */}
     async function handleSearch(searchQuery, newPage = 1) {
         setQuery(searchQuery);
         setPage(newPage);
 
-        // EMPTY SEARCH → RESET TO DEFAULT (correct page)
         if (!searchQuery || searchQuery.trim().length === 0) {
-            await loadDefault(newPage);   // FIXED
+            await loadDefault(newPage);
             return;
         }
 
@@ -108,19 +104,18 @@ export default function SearchPage() {
         }
     }
 
-    async function applyFilters (newFilters) {
-
-
+    async function applyFilters(newFilters) {
         const noFilters =
             (!newFilters.genre || newFilters.genre === "") &&
             (!newFilters.year || newFilters.year === "") &&
-            newFilters.rating === 0;
+            newFilters.rating === 0 &&
+            (!newFilters.minRevenue || newFilters.minRevenue === 0) &&
+            (!newFilters.maxRevenue || newFilters.maxRevenue === 0);
 
         if (noFilters) {
             await loadDefault();
             return;
         }
-
 
         const { genre, rating, year } = newFilters;
 
@@ -145,7 +140,6 @@ export default function SearchPage() {
             Western: 37
         };
 
-
         setLoading(true);
 
         let query = `?sort_by=popularity.desc&page=1`;
@@ -154,12 +148,61 @@ export default function SearchPage() {
         if (rating > 0) query += `&vote_average.gte=${rating}`;
         if (year?.length === 4) query += `&primary_release_year=${year}`;
 
+        {/* BASE DISCOVERY QUERY */}
+        let baseQuery = `?sort_by=popularity.desc`;
+
+        if (newFilters.genre && GENRES[newFilters.genre])
+            baseQuery += `&with_genres=${GENRES[newFilters.genre]}`;
+
+        if (newFilters.rating > 0)
+            baseQuery += `&vote_average.gte=${newFilters.rating}`;
+
+        if (newFilters.year?.length === 4)
+            baseQuery += `&primary_release_year=${newFilters.year}`;
+
+        let allMovies = [];
+
+        {/* FETCH FIRST 10 PAGES FOR SORTING */}
+        for (let p = 1; p <= 10; p++) {
+            const pageQuery = `${baseQuery}&page=${p}`;
+            const data = await discoverMovies(pageQuery);
+
+            if (!data?.results?.length) break;
+
+            allMovies.push(...data.results);
+
+            if (data.results.length < 20) break;
+
+        }
+
         const data = await discoverMovies(query);
+        {/*REVENUE DETAILS FOR EVERY MOVIE */}
+        const detailedMovies = await Promise.all(
+            allMovies.map(async (movie) => {
+                try {
+                    const res = await fetch(
+                        `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
+                    );
+                    const info = await res.json();
+                    return { ...movie, revenue: info.revenue ?? 0 };
+                } catch (err) {
+                    return { ...movie, revenue: 0 };
+                }
+            })
+        );
 
-        setMovies(data.results ?? []);
-        setMovieTotal(Math.min(data.total_results ?? 0, 10000));
+        {/* REVENUE FILTERING */}
+        let filtered = detailedMovies;
 
-        // Filters affect only movies → clear people
+        if (newFilters.minRevenue > 0)
+            filtered = filtered.filter((m) => m.revenue >= newFilters.minRevenue);
+
+        if (newFilters.maxRevenue > 0)
+            filtered = filtered.filter((m) => m.revenue <= newFilters.maxRevenue);
+
+        setMovies(filtered);
+        setMovieTotal(filtered.length);
+
         setPeople([]);
         setPeopleTotal(0);
 
@@ -169,7 +212,6 @@ export default function SearchPage() {
     }
 
     async function applyTVFilters(newFilters) {
-
         const noFilters =
             (!newFilters.genre || newFilters.genre === "") &&
             (!newFilters.year || newFilters.year === "") &&
@@ -213,8 +255,6 @@ export default function SearchPage() {
         setTotalPages(data?.total_pages ?? 1);
     }
 
-
-
     return (
         <div className="min-h-screen bg-background pt-24 pb-12">
             <div className="container mx-auto px-4">
@@ -225,6 +265,7 @@ export default function SearchPage() {
 
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+
                         <Input
                             type="text"
                             placeholder="Search for movies, actors, or directors..."
@@ -236,6 +277,12 @@ export default function SearchPage() {
                             }}
                             className="pl-12 h-14 text-lg bg-card border-border focus-visible:ring-accent"
                         />
+                        <Button
+                            className="absolute right-3 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl"
+                            onClick={() => setIsFiltersVisible(true)}
+                        >
+                            Filters
+                        </Button>
                     </div>
                 </div>
 
@@ -253,24 +300,10 @@ export default function SearchPage() {
                             <TabsTrigger value="people">People ({peopleTotal})</TabsTrigger>
                         </TabsList>
 
+                        {/* MOVIE GRID */}
                         <TabsContent value="movies">
                             <div className="relative">
 
-                                {/* FIXED LEFT FILTER SIDEBAR */}
-                                <div className="hidden lg:block fixed left-8 top-45 z-20">
-                                    <FiltersSidebar
-                                        filters={filters}
-                                        mode="movie"
-                                        onFilterChange={(updatedFilters) => {
-                                            setFilters(updatedFilters);
-                                            applyFilters(updatedFilters);
-                                        }}
-                                    />
-                                </div>
-
-
-
-                                {/* MOVIE GRID –  */}
                                 <div className="lg:ml-0">
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                                         {movies.map((movie) => (
@@ -292,21 +325,6 @@ export default function SearchPage() {
 
                         <TabsContent value="tv">
                             <div className="relative">
-
-
-                                {/* TV Filters Sidebar */}
-                                <div className="hidden lg:block fixed left-8 top-45 z-20">
-                                    <FiltersSidebar
-                                        filters={tvFilters}
-                                        mode="tv"
-                                        onFilterChange={(updatedFilters) => {
-                                            setTvFilters(updatedFilters);
-                                            applyTVFilters(updatedFilters);
-                                        }}
-                                    />
-                                </div>
-
-
                                 {/* TV GRID */}
                                 <div className="lg:ml-0">
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-start">
@@ -374,6 +392,25 @@ export default function SearchPage() {
                     Next
                 </Button>
             </div>
+
+            {isFiltersVisible && (
+                <FiltersSidebar
+                    filters={activeTab === "movies" ? filters : tvFilters}
+                    mode={activeTab === "movies" ? "movie" : "tv"}
+                    onApply={(updatedFilters) => {
+                        if (activeTab === "movies") {
+                            setFilters(updatedFilters);
+                            applyFilters(updatedFilters);
+                        } else {
+                            setTvFilters(updatedFilters);
+                            applyTVFilters(updatedFilters);
+                        }
+                        setIsFiltersVisible(false);
+                    }}
+                    onClose={() => setIsFiltersVisible(false)}
+                />
+            )}
+
         </div>
     );
 }
