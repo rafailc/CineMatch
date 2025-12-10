@@ -200,7 +200,7 @@ export default function MovieDetailsPage() {
                 <section className="mb-12">
                     <h2 className="text-2xl font-bold mb-6 text-foreground">Cast</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {movie.credits.cast.slice(0, 12).map((member) => (
+                        {movie.cast.slice(0, 12).map((member) => (
                             <PersonCard
                                 key={member.id}
                                 id={member.id}

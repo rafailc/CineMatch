@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class TvServiceImpl implements TmdbService {
+public class TvServiceImpl implements TvService {
 
     private final TmdbRepository tmdbRepository;
 
