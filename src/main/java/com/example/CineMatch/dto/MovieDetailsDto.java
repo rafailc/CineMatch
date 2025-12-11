@@ -38,5 +38,5 @@ public class MovieDetailsDto {
     private List<GenreDto> genres;
     private List<ProductionCompanyDto> productionCompanies;
     private List<SpokenLanguageDto> spokenLanguages;
-    private List<CastDto> cast;
+    private List<PersonDto> cast;
 }
