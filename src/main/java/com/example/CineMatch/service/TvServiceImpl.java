@@ -1,6 +1,6 @@
 package com.example.CineMatch.service;
 
-import com.example.CineMatch.Repository.TmdbRepository
+import com.example.CineMatch.Repository.TmdbRepository;
 import com.example.CineMatch.dto.ResponseDto;
 import com.example.CineMatch.dto.TvDetailsDto;
 import com.example.CineMatch.dto.TvDto;
