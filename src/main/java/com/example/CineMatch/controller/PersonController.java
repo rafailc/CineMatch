@@ -1,14 +1,14 @@
 package com.example.CineMatch.controller;
 
+import com.example.CineMatch.dto.PersonDetailsDto;
+import com.example.CineMatch.dto.PersonDto;
+import com.example.CineMatch.dto.ResponseDto;
 import com.example.CineMatch.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tmdb")
@@ -23,19 +23,19 @@ public class PersonController {
 
     /* Trending */
     @GetMapping("/trending/person")
-    public Object getTrendingPerson(@RequestParam(defaultValue = "1") int page) {
+    public ResponseDto<PersonDto> getTrendingPerson(@RequestParam(defaultValue = "1") int page) {
         return personService.getTrending(page);
     }
 
     /* Search */
     @GetMapping("/search/people")
-    public Object searchPeople(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+    public ResponseDto<PersonDto> searchPeople(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
         return personService.getSearch(q, page);
     }
 
     /* Details */
     @GetMapping("/person/{id}")
-    public Object personDetails(@PathVariable long id) {
+    public PersonDetailsDto personDetails(@PathVariable long id) {
         return personService.getDetails(id);
     }
 

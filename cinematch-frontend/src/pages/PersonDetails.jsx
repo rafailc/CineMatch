@@ -132,7 +132,7 @@ export default function PersonDetailsPage() {
                         <section>
                             <h2 className="text-2xl font-bold mb-6 text-foreground">Known For</h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {person.movie_credits.cast
+                                {person.movie_credits
                                     .sort((a, b) => b.popularity - a.popularity)
                                     .slice(0, 8)
                                     .map((movie) => (

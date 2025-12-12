@@ -1,9 +1,13 @@
 package com.example.CineMatch.service;
 
+import com.example.CineMatch.dto.PersonDetailsDto;
+import com.example.CineMatch.dto.PersonDto;
+import com.example.CineMatch.dto.ResponseDto;
+
 import java.util.Map;
 
 public interface PersonService {
-    String getTrending(int page);
-    String getSearch(String q, int page);
-    Map<String, Object> getDetails(long id);
+    ResponseDto<PersonDto> getTrending(int page);
+    ResponseDto<PersonDto> getSearch(String q, int page);
+    PersonDetailsDto getDetails(long id);
 }

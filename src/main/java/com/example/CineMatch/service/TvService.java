@@ -1,10 +1,14 @@
 package com.example.CineMatch.service;
 
+import com.example.CineMatch.dto.ResponseDto;
+import com.example.CineMatch.dto.TvDetailsDto;
+import com.example.CineMatch.dto.TvDto;
+
 import java.util.Map;
 
 public interface TvService {
-    String getTrending(int page);
-    String getSearch(String q, int page);
-    Map<String, Object> getDiscover(String q);
-    Map<String, Object> getDetails(long id);
+    ResponseDto<TvDto> getTrending(int page);
+    ResponseDto<TvDto> getSearch(String q, int page);
+    ResponseDto<TvDto> getDiscover(String q);
+    TvDetailsDto getDetails(long id);
 }
