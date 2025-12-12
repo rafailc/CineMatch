@@ -46,7 +46,6 @@ public class PersonServiceImpl implements PersonService {
         Map<String, Object> credits = tmdbRepository.callMap("/person/" + id + "/movie_credits");
         details.put("movie_credits", credits.get("cast"));
         String json = objectMapper.writeValueAsString(details);
-        System.out.println(json);
         PersonDetailsDto dto = objectMapper.readValue(json, PersonDetailsDto.class);
         return dto;
     }
