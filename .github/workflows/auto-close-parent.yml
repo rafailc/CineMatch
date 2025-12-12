@@ -1,0 +1,88 @@
+name: Auto Close Parent Sub-Issue
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  check-and-close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Parent and Close if Completed
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNodeId = context.payload.issue.node_id;
+            
+            // 1. Το ΝΕΟ Query ειδικά για Sub-issues (Hierarchy)
+            const query = `
+              query($issueId: ID!) {
+                node(id: $issueId) {
+                  ... on Issue {
+                    parent {
+                      id
+                      number
+                      title
+                      subIssues(first: 100) {
+                        nodes {
+                          state
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            console.log(`Checking issue node_id: ${issueNodeId}`);
+
+            try {
+              const result = await github.graphql(query, { issueId: issueNodeId });
+              
+              // Αν το Issue δεν έχει γονέα (parent is null), σταματάμε
+              if (!result.node.parent) {
+                console.log("No parent issue found. This is a standalone issue or top-level issue.");
+                return;
+              }
+
+              const parent = result.node.parent;
+              console.log(`Parent found: #${parent.number} - ${parent.title}`);
+
+              // 2. Ελέγχουμε τα αδέλφια (sub-issues του γονέα)
+              const subIssues = parent.subIssues.nodes;
+              const openSubIssues = subIssues.filter(sub => sub.state !== 'CLOSED');
+
+              if (openSubIssues.length === 0) {
+                console.log(`All sub-issues for parent #${parent.number} are closed. Closing parent now...`);
+                
+                // 3. Κλείνουμε το γονικό Issue
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parent.number,
+                  state: 'closed',
+                  state_reason: 'completed'
+                });
+
+                console.log("Parent issue closed successfully.");
+                
+                // Προαιρετικό σχόλιο
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parent.number,
+                  body: "✅ All sub-issues are completed. Auto-closing parent issue."
+                });
+
+              } else {
+                console.log(`Parent #${parent.number} still has ${openSubIssues.length} open sub-issues. Keeping it open.`);
+              }
+
+            } catch (error) {
+              console.error("GraphQL query failed:", error);
+              core.setFailed(`Action failed with error: ${error.message}`);
+            }
