@@ -146,7 +146,7 @@ export default function TvDetailPage() {
                         {/* Cast */}
                         <h2 className="text-2xl font-semibold mb-4">Cast</h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-12">
-                            {series.credits?.cast.slice(0, 12).map((person) => (
+                            {series.cast.slice(0, 12).map((person) => (
                                 <PersonCard
                                     key={person.id}
                                     id={person.id}

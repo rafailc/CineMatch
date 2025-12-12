@@ -1,5 +1,8 @@
 package com.example.CineMatch.controller;
 
+import com.example.CineMatch.dto.ResponseDto;
+import com.example.CineMatch.dto.TvDetailsDto;
+import com.example.CineMatch.dto.TvDto;
 import com.example.CineMatch.service.TvService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,19 +22,19 @@ public class TvController {
 
     /* Trending */
     @GetMapping("/trending/tv")
-    public Object getTrendingTv(@RequestParam(defaultValue = "1") int page) {
+    public ResponseDto<TvDto> getTrendingTv(@RequestParam(defaultValue = "1") int page) {
         return tvService.getTrending(page);
     }
 
     /* Search */
     @GetMapping("/search/tv")
-    public Object searchTV(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
+    public ResponseDto<TvDto> searchTV(@RequestParam String q, @RequestParam(defaultValue = "1") int page) {
         return tvService.getSearch(q, page);
     }
 
     /* Discover */
     @GetMapping("/discover/tv")
-    public Object discoverTV(@RequestParam Map<String, String> params) {
+    public ResponseDto<TvDto> discoverTV(@RequestParam Map<String, String> params) {
         StringBuilder query = new StringBuilder("?");
         params.forEach((key, value) -> {
             query.append(key).append("=").append(value).append("&");
@@ -41,7 +44,7 @@ public class TvController {
 
     /* Details */
     @GetMapping("/series/{id}")
-    public Object seriesDetails(@PathVariable long id) {
+    public TvDetailsDto seriesDetails(@PathVariable long id) {
         return tvService.getDetails(id);
     }
 }

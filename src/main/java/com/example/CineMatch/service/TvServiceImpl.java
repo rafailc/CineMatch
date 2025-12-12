@@ -1,8 +1,12 @@
 package com.example.CineMatch.service;
 
-import com.example.CineMatch.Repository.TmdbRepository;
+import com.example.CineMatch.Repository.TmdbRepository
+import com.example.CineMatch.dto.ResponseDto;
+import com.example.CineMatch.dto.TvDetailsDto;
+import com.example.CineMatch.dto.TvDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
@@ -10,33 +14,44 @@ import java.util.Map;
 public class TvServiceImpl implements TvService {
 
     private final TmdbRepository tmdbRepository;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-     public TvServiceImpl(TmdbRepository tmdbRepository) {
+     public TvServiceImpl(TmdbRepository tmdbRepository, ObjectMapper objectMapper) {
         this.tmdbRepository = tmdbRepository;
+        this.objectMapper = objectMapper;
     }
 
     // TRENDING
     @Override
-    public String getTrending(int page) {
-        return tmdbRepository.call("/trending/tv/week?page=" + page);
+    public ResponseDto<TvDto> getTrending(int page) {
+        String json = tmdbRepository.call("/trending/tv/week?page=" + page);
+        ResponseDto<TvDto> response = objectMapper.readValue(json, ResponseDto.class);
+        return response;
     }
 
     // SEARCH
-    public String getSearch(String q, int page) {
-        return tmdbRepository.call("/search/tv?query=" + q + "&page=" + page);
+    public ResponseDto<TvDto> getSearch(String q, int page) {
+        String json = tmdbRepository.call("/search/tv?query=" + q + "&page=" + page);
+        ResponseDto<TvDto> response = objectMapper.readValue(json, ResponseDto.class);
+        return response;
     }
 
     // DISCOVER
-    public Map<String, Object> getDiscover(String q) {
-        return tmdbRepository.callMap("/discover/tv" + q);
+    public ResponseDto<TvDto> getDiscover(String q) {
+        Map<String,Object> map = tmdbRepository.callMap("/discover/tv" + q);
+        String json = objectMapper.writeValueAsString(map);
+        ResponseDto<TvDto> response = objectMapper.readValue(json, ResponseDto.class);
+        return response;
     }
 
     // DETAILS
-    public Map<String, Object> getDetails(long id) {
+    public TvDetailsDto getDetails(long id) {
         Map<String, Object> details = tmdbRepository.callMap("/tv/" + id);
         Map<String, Object> credits = tmdbRepository.callMap("/tv/" + id + "/credits");
-        details.put("credits", credits);
-        return details;
+        details.put("cast", credits.get("cast"));
+        String json = objectMapper.writeValueAsString(details);
+        TvDetailsDto dto = objectMapper.readValue(json, TvDetailsDto.class);
+        return dto;
     }
 }
