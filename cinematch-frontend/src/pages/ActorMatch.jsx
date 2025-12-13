@@ -221,7 +221,7 @@ export default function ActorMatchPage() {
             setProgressText("Λήψη λίστας διάσημων ηθοποιών...");
             setProgress(50);
 
-            const response = await fetch("/actors_db_face.json");
+            const response = await fetch("https://pdfpnmhsvendlsgskjdk.supabase.co/storage/v1/object/public/assets/actors_db_face.json");
             if (!response.ok) {
                 throw new Error("Αδυναμία φόρτωσης βάσης δεδομένων ηθοποιών.");
             }
