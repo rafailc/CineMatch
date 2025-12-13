@@ -4,62 +4,53 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles, Upload, Camera, X, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getTrendingPerson } from "@/lib/tmdbBackend";
-import { cosineSimilarity } from "@/lib/ai-utils";
-import { pipeline, env } from "@xenova/transformers";
+import * as faceapi from "@vladmandic/face-api";
 
-env.allowLocalModels = false;
-env.useBrowserCache = true;
+// Load face-api models mia fora
+let modelsLoaded = false;
+async function loadModels() {
+    if (modelsLoaded) return;
 
-// Base URL of your Spring backend TMDB API
-const API_BASE = "http://localhost:8080/api/tmdb";
+    const MODEL_URL = "/models";
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
-// Helper: make sure profile_path always starts with "/"
+    modelsLoaded = true;
+}
+
+// Efklidiani apostasi metaksi 2 128-dimensional vectors
+function euclideanDistance(embedding1, embedding2) {
+    let sum = 0;
+    for (let i = 0; i < embedding1.length; i++) {
+        const diff = embedding1[i] - embedding2[i];
+        sum += diff * diff;
+    }
+    return Math.sqrt(sum);
+}
+
+// Convert distance to similarity percentage (0-100)
+function distanceToSimilarity(distance) {
+    // Face-api.js Euclidean distances range:
+    // 0.0 - 0.4: Same person (excellent match)
+    // 0.4 - 0.6: Very similar (good match)
+    // 0.6 - 1.0: Some similarity (moderate match)
+    // 1.0+: Different people (poor match)
+
+    if (distance < 0.4) {
+        return Math.round(100 - (distance / 0.4) * 15);
+    } else if (distance < 0.6) {
+        return Math.round(85 - ((distance - 0.4) / 0.2) * 15);
+    } else if (distance < 1.0) {
+        return Math.round(70 - ((distance - 0.6) / 0.4) * 40);
+    } else {
+        return Math.round(Math.max(0, 30 - ((distance - 1.0) / 0.5) * 30));
+    }
+}
+
 function cleanPath(path) {
     if (!path) return "";
     return path.startsWith("/") ? path : "/" + path;
-}
-
-/**
- * Load image (from our backend proxy) and convert to Base64 for the extractor.
- * IMPORTANT: This does NOT use fetch(), it uses <img> + canvas
- */
-async function loadImageAsBase64(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous"; // allowed because backend adds CORS
-        img.src = url;
-
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-
-            resolve(canvas.toDataURL("image/jpeg"));
-        };
-
-        img.onerror = () => reject("Failed to load image at " + url);
-    });
-}
-
-let extractorPromise = null;
-async function getExtractor() {
-    if (!extractorPromise) {
-        extractorPromise = pipeline(
-            "image-feature-extraction",
-            "Xenova/vit-base-patch16-224-in21k",
-            {
-                device: "wasm",
-                revision: "main",
-                dtype: "fp32",
-                quantized: false,
-            }
-        );
-    }
-    return extractorPromise;
 }
 
 export default function ActorMatchPage() {
@@ -70,7 +61,13 @@ export default function ActorMatchPage() {
     const [results, setResults] = useState(null);
 
     const fileInputRef = useRef(null);
+    const imgRef = useRef(null);
     const { toast } = useToast();
+
+    const [showCamera, setShowCamera] = useState(false);
+    const [stream, setStream] = useState(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     // Επιλογή αρχείου
     const handleFileSelect = useCallback(
@@ -114,6 +111,63 @@ export default function ActorMatchPage() {
         }
     };
 
+    // Open camera
+    const openCamera = async () => {
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" } // Use front camera on mobile
+            });
+            setStream(mediaStream);
+            setShowCamera(true);
+
+            // Wait for video element to be ready
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = mediaStream;
+                }
+            }, 100);
+        } catch (error) {
+            toast({
+                title: "Σφάλμα κάμερας",
+                description: "Δεν ήταν δυνατή η πρόσβαση στην κάμερα.",
+                variant: "destructive",
+            });
+        }
+    };
+
+// Capture photo from camera
+    const capturePhoto = () => {
+        if (!videoRef.current || !canvasRef.current) return;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+
+        // Set canvas size to video size
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64
+        const imageData = canvas.toDataURL("image/jpeg");
+        setUploadedImage(imageData);
+        setResults(null);
+
+        // Close camera
+        closeCamera();
+    };
+
+// Close camera and stop stream
+    const closeCamera = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setShowCamera(false);
+    };
+
     const analyzePhoto = async () => {
         if (!uploadedImage) {
             toast({
@@ -130,94 +184,78 @@ export default function ActorMatchPage() {
         setResults(null);
 
         try {
-            // 1. Load AI Model
+            // Step 1: Load face-api models
             setProgressText("Φόρτωση AI μοντέλου...");
             setProgress(10);
-            const extractor = await getExtractor();
+            await loadModels();
 
-            // 2. Analyze User Image
+            // Step 2: Detect face in uploaded image
             setProgressText("Ανάλυση της φωτογραφίας σου...");
-            setProgress(20);
-            const userFeatures = await extractor(uploadedImage);
-            const userEmbedding = Array.from(userFeatures.data);
-
-            // 3. Fetch Multiple Pages of Actors (e.g., 5 Pages = 100 Actors)
-            setProgressText("Λήψη λίστας διάσημων ηθοποιών...");
             setProgress(30);
 
-            const pagesToFetch = [1, 2, 3, 4, 5]; // Fetch top 100 trending
-            let allPeople = [];
-
-            // We use Promise.all to fetch pages in parallel for speed
-            const pagePromises = pagesToFetch.map(page => getTrendingPerson(page));
-            const pagesResults = await Promise.all(pagePromises);
-
-            pagesResults.forEach(data => {
-                if (data.results) {
-                    allPeople = [...allPeople, ...data.results];
+            // Wait for image to be loaded in the DOM
+            await new Promise((resolve) => {
+                if (imgRef.current?.complete) {
+                    resolve();
+                } else if (imgRef.current) {
+                    imgRef.current.onload = resolve;
+                } else {
+                    resolve();
                 }
             });
 
-            // Filter valid actors (must have image, be actors, etc.)
-            const actors = allPeople.filter(
-                (p) =>
-                    p.known_for_department === "Acting" &&
-                    p.profile_path &&
-                    p.popularity > 1 // Ensure they are somewhat known
-            );
+            const detection = await faceapi
+                .detectSingleFace(imgRef.current)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
 
-            // Remove duplicates (sometimes an actor appears on multiple pages/lists)
-            const uniqueActors = Array.from(new Map(actors.map(item => [item.id, item])).values());
-
-            // Limit total to analyze to avoid browser crash (e.g., 50 is a good balance)
-            const actorsToAnalyze = uniqueActors.slice(0, 50);
-
-            if (actorsToAnalyze.length === 0) {
-                throw new Error("Δεν βρέθηκαν αρκετοί ηθοποιοί για σύγκριση.");
+            if (!detection) {
+                throw new Error(
+                    "Δεν εντοπίστηκε πρόσωπο στην εικόνα. Ανέβασε μια καθαρή φωτογραφία με ορατό πρόσωπο."
+                );
             }
 
-            // 4. Compare Loop
-            setProgressText(`Σύγκριση με ${actorsToAnalyze.length} ηθοποιούς...`);
+            const userEmbedding = Array.from(detection.descriptor);
 
-            const actorResults = [];
+            // Step 3: Load actor database
+            setProgressText("Λήψη λίστας διάσημων ηθοποιών...");
+            setProgress(50);
 
-            for (let i = 0; i < actorsToAnalyze.length; i++) {
-                const actor = actorsToAnalyze[i];
+            const response = await fetch("https://pdfpnmhsvendlsgskjdk.supabase.co/storage/v1/object/public/assets/actors_db_face.json");
+            if (!response.ok) {
+                throw new Error("Αδυναμία φόρτωσης βάσης δεδομένων ηθοποιών.");
+            }
 
-                // Update progress bar dynamically
-                const percentComplete = 30 + Math.round(((i + 1) / actorsToAnalyze.length) * 60);
-                setProgress(percentComplete);
-                setProgressText(`Σύγκριση με ${actor.name} (${i + 1}/${actorsToAnalyze.length})...`);
+            const actors = await response.json();
 
-                const profilePath = cleanPath(actor.profile_path);
-                const actorImageUrl = `${API_BASE}/image?path=${profilePath}`;
+            if (!actors || actors.length === 0) {
+                throw new Error("Η βάση δεδομένων είναι άδεια.");
+            }
 
-                try {
-                    const base64ActorImage = await loadImageAsBase64(actorImageUrl);
+            // Step 4: Compare with all actors
+            setProgressText(`Σύγκριση με ${actors.length} ηθοποιούς...`);
+            setProgress(70);
 
-                    // Run AI extraction
-                    const actorFeatures = await extractor(base64ActorImage);
-                    const actorEmbedding = Array.from(actorFeatures.data);
+            const scores = actors
+                .map((actor) => {
+                    if (!actor.embedding || actor.embedding.length !== 128) {
+                        return null;
+                    }
 
-                    if (!actorEmbedding || actorEmbedding.length === 0) continue;
+                    const distance = euclideanDistance(userEmbedding, actor.embedding);
+                    const similarity = distanceToSimilarity(distance);
 
-                    const similarity = cosineSimilarity(userEmbedding, actorEmbedding);
-
-                    actorResults.push({
+                    return {
                         ...actor,
-                        similarity: Math.round(similarity * 100),
-                    });
-                } catch (err) {
-                    // Fail silently for individual actors so one bad image doesn't stop the whole process
-                    console.warn(`Skipping ${actor.name}:`, err);
-                }
-            }
+                        distance: distance,
+                        similarity: similarity,
+                    };
+                })
+                .filter(Boolean);
 
-            // 5. Finalize
-            setProgressText("Ολοκλήρωση αποτελεσμάτων...");
-            const topMatches = actorResults
-                .sort((a, b) => b.similarity - a.similarity)
-                .slice(0, 5); // Keep top 5 best matches
+            // Step 5: Sort by distance (lower is better) and get top 5
+            scores.sort((a, b) => a.distance - b.distance);
+            const topMatches = scores.slice(0, 5);
 
             setResults(topMatches);
             setProgress(100);
@@ -225,7 +263,7 @@ export default function ActorMatchPage() {
 
             toast({
                 title: "Η ανάλυση ολοκληρώθηκε!",
-                description: `Συγκρίναμε το πρόσωπό σου με ${actorsToAnalyze.length} διάσημους!`,
+                description: `Συγκρίναμε το πρόσωπό σου με ${actors.length} διάσημους!`,
             });
         } catch (error) {
             console.error("Analysis error:", error);
@@ -257,30 +295,83 @@ export default function ActorMatchPage() {
                     </div>
 
                     <Card className="p-6 bg-card border-border mb-8 shadow-md shadow-black/30">
-                        {!uploadedImage ? (
-                            <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-border rounded-lg p-12 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"
-                            >
-                                <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                <p className="text-foreground font-medium mb-2">
-                                    Κάνε κλικ για να ανεβάσεις φωτογραφία
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    PNG, JPG ή WEBP (μέχρι 10MB)
-                                </p>
+                        {!uploadedImage && !showCamera ? (
+                            <div className="space-y-4">
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-border rounded-lg p-12 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"
+                                >
+                                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                    <p className="text-foreground font-medium mb-2">
+                                        Κάνε κλικ για να ανεβάσεις φωτογραφία
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        PNG, JPG ή WEBP (μέχρι 10MB)
+                                    </p>
+                                </div>
+
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-border"></div>
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-card px-2 text-muted-foreground">Ή</span>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    onClick={openCamera}
+                                    variant="outline"
+                                    className="w-full"
+                                    size="lg"
+                                >
+                                    <Camera className="w-5 h-5 mr-2" />
+                                    Άνοιγμα Κάμερας
+                                </Button>
+                            </div>
+                        ) : showCamera ? (
+                            <div className="space-y-4">
+                                <div className="relative aspect-square max-w-sm mx-auto rounded-lg overflow-hidden bg-black">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-full object-cover scale-x-[-1]"
+                                    />
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={capturePhoto}
+                                        className="flex-1 bg-gradient-to-r from-accent to-primary hover:opacity-90"
+                                        size="lg"
+                                    >
+                                        <Camera className="w-5 h-5 mr-2" />
+                                        Λήψη Φωτογραφίας
+                                    </Button>
+                                    <Button
+                                        onClick={closeCamera}
+                                        variant="outline"
+                                        size="lg"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 <div className="relative aspect-square max-w-sm mx-auto rounded-lg overflow-hidden">
                                     <img
+                                        ref={imgRef}
                                         src={uploadedImage}
                                         alt="Uploaded"
                                         className="w-full h-full object-cover"
+                                        crossOrigin="anonymous"
                                     />
                                     <button
                                         onClick={clearImage}
                                         className="absolute top-2 right-2 p-2 bg-background/80 rounded-full hover:bg-background transition-colors"
+                                        disabled={isProcessing}
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -313,6 +404,9 @@ export default function ActorMatchPage() {
                             onChange={handleFileSelect}
                             className="hidden"
                         />
+
+                        {/* Hidden canvas for photo capture */}
+                        <canvas ref={canvasRef} style={{ display: 'none' }} />
                     </Card>
 
                     {results && results.length > 0 && (
@@ -372,11 +466,10 @@ export default function ActorMatchPage() {
                             Πώς λειτουργεί;
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            Η λειτουργία χρησιμοποιεί ένα Vision Transformer (ViT) AI μοντέλο
-                            που τρέχει απευθείας στον browser σου, εξάγοντας χαρακτηριστικά από
-                            εικόνες. Έπειτα συγκρίνει αυτά τα χαρακτηριστικά με εικόνες
-                            trending ηθοποιών από το CineMatch backend. Η φωτογραφία σου δεν
-                            φεύγει ποτέ από τη συσκευή σου.
+                            Η λειτουργία χρησιμοποιεί face-api.js με τεχνολογία αναγνώρισης προσώπου
+                            που τρέχει απευθείας στον browser σου. Συγκρίνει το πρόσωπό σου με μια
+                            προ-υπολογισμένη βάση δεδομένων 128-διάστατων embeddings από χιλιάδες
+                            διάσημους ηθοποιούς. Η φωτογραφία σου δεν φεύγει ποτέ από τη συσκευή σου.
                         </p>
                     </Card>
                 </div>

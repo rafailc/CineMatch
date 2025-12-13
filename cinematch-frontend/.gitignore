@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env
+
+public/actors_db_face.json
