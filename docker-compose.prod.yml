@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/<your-username-or-org>/cinematch-frontend:latest
+    image: ghcr.io/${GHCR_OWNER}/cinematch-frontend:latest
     container_name: react-nginx
     environment:
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
@@ -11,7 +11,7 @@ services:
       - "5173:80"
 
   spring-application:
-    image: ghcr.io/<your-username-or-org>/cinematch-backend:latest
+    image: ghcr.io/${GHCR_OWNER}/cinematch-backend:latest
     container_name: spring-app-cinematch
     environment:
       SPRING_DATASOURCE_URL: ${SUPABASE_URL}
