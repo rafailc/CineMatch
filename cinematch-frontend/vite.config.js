@@ -9,8 +9,10 @@ export default defineConfig({
             "@": path.resolve(__dirname, "./src"),
         },
     },
-    optimizeDeps: {
-        exclude: ["@xenova/transformers"],
+     build: {
+        rollupOptions: {
+            external: ["@xenova/transformers"],
+        },
     },
     }
 )
