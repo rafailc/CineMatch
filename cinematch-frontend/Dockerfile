@@ -1,4 +1,4 @@
-FROM node:23-alpine AS build
+FROM node:20-bullseye AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
