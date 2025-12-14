@@ -7,10 +7,34 @@ import HorizontalCarousel from "@/components/HorizontalCarousel";
 
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
+function analyzePreferredGenres(favoritesRows) {
+    const genreCounts = {};
+    let total = 0;
+
+    for (const item of favoritesRows) {
+        if (!Array.isArray(item.genres)) continue;
+
+        for (const genre of item.genres) {
+            if (!genre) continue;
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+            total++;
+        }
+    }
+
+    return Object.entries(genreCounts)
+        .map(([genre, count]) => ({
+            genre,
+            percentage: Math.round((count / total) * 100)
+        }))
+        .sort((a, b) => b.percentage - a.percentage);
+}
+
+
 export default function FavoritesPage() {
     const [movies, setMovies] = useState([]);
     const [series, setSeries] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [preferredGenres, setPreferredGenres] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -37,6 +61,23 @@ export default function FavoritesPage() {
             toast.error("Failed to load favorites");
             setLoading(false);
             return;
+        }
+
+        const affinity = analyzePreferredGenres(data);
+        setPreferredGenres(affinity);
+
+        const { error: prefError } = await supabase
+            .from("user_preferences")
+            .upsert(
+                {
+                    user_id: user.id,
+                    genre_affinity: affinity
+                },
+                { onConflict: "user_id" }
+            );
+
+        if (prefError) {
+            console.error("Failed to store genre affinity:", prefError.message);
         }
 
         // Xorise ta movies kai series

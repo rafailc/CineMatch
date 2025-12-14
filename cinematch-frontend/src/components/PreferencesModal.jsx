@@ -24,6 +24,66 @@ const GENRES = [
     { id: 37, name: "Western" }
 ];
 
+const GENRE_ID_TO_NAME = Object.fromEntries(GENRES.map(g => [g.id, g.name]));
+
+function mergePreferences(favoriteAffinity, explicitGenreIds) {
+    const scores = new Map();
+
+    for (const g of favoriteAffinity || []) {
+        scores.set(
+            g.genre,
+            (scores.get(g.genre) || 0) + 0.7 * g.percentage
+        );
+    }
+
+    const explicitNames = (explicitGenreIds || [])
+        .map(id => GENRE_ID_TO_NAME[id])
+        .filter(Boolean);
+
+    if (explicitNames.length > 0) {
+        const per = 100 / explicitNames.length;
+        for (const name of explicitNames) {
+            scores.set(
+                name,
+                (scores.get(name) || 0) + 0.3 * per
+            );
+        }
+    }
+
+    const total = [...scores.values()].reduce((a, b) => a + b, 0);
+
+    return [...scores.entries()]
+        .map(([genre, score]) => ({
+            genre,
+            percentage: total > 0 ? Math.round((score / total) * 100) : 0
+        }))
+        .filter(x => x.percentage > 0)
+        .sort((a, b) => b.percentage - a.percentage);
+}
+
+function analyzePreferredGenresFromFavoritesRows(favoritesRows) {
+    const genreCounts = {};
+    let total = 0;
+
+    for (const item of favoritesRows || []) {
+        if (!Array.isArray(item.genres)) continue;
+
+        for (const genre of item.genres) {
+            if (!genre) continue;
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+            total++;
+        }
+    }
+
+    return Object.entries(genreCounts)
+        .map(([genre, count]) => ({
+            genre,
+            percentage: total > 0 ? Math.round((count / total) * 100) : 0
+        }))
+        .sort((a, b) => b.percentage - a.percentage);
+}
+
+
 export default function PreferencesModal({ open, onClose, user }) {
     const [selected, setSelected] = useState([]);
 
@@ -48,16 +108,49 @@ export default function PreferencesModal({ open, onClose, user }) {
     }
 
     async function savePreferences() {
-        const { error } = await supabase.from("user_preferences").upsert({
-            user_id: user.id,
-            genres: selected
-        });
 
-        if (error) toast.error("Failed to save preferences");
-        else toast.success("Preferences saved!");
+        const { error: prefError } = await supabase
+            .from("user_preferences")
+            .upsert(
+                { user_id: user.id, genres: selected },
+                { onConflict: "user_id" }
+            );
 
+        if (prefError) {
+            toast.error("Failed to save preferences");
+            return;
+        }
+
+        const { data: favRows, error: favError } = await supabase
+            .from("user_favorites")
+            .select("genres")
+            .eq("user_id", user.id);
+
+        if (favError) {
+            console.error("Failed to load favorites:", favError.message);
+            toast.success("Preferences saved!");
+            onClose();
+            return;
+        }
+
+
+        const favoriteAffinity = analyzePreferredGenresFromFavoritesRows(favRows);
+        const combinedAffinity = mergePreferences(favoriteAffinity, selected);
+        const { error: affinityError } = await supabase
+            .from("user_preferences")
+            .upsert(
+                { user_id: user.id, genre_affinity: combinedAffinity },
+                { onConflict: "user_id" }
+            );
+        if (affinityError) {
+            console.error("Failed to save genre_affinity:", affinityError.message);
+        }
+
+        toast.success("Preferences saved!");
         onClose();
     }
+
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="bg-background border border-border rounded-xl max-w-md mx-auto">
