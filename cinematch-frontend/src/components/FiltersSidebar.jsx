@@ -1,4 +1,4 @@
-import { useState} from "react";
+import {useEffect, useState} from "react";
 import "../styles/slider.css";
 import "../styles/year.css";
 import { motion } from "framer-motion";
@@ -12,7 +12,10 @@ export default function FiltersSidebar({ filters, mode, onApply, onClose }) {
     // Local sidebar state (independent)
     const [localFilters, setLocalFilters] = useState(filters);
 
-
+    // Checks if localfilters match the latest state when remounted
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
 
     const genresMovie = [
         "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
