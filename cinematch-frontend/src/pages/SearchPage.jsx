@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams  } from "react-router-dom";
 import { MovieCard } from "../components/MovieCard";
 import { PersonCard } from "../components/PersonCard";
 import { searchMovies, searchPerson, searchTv } from "../lib/tmdbBackend";
@@ -26,6 +26,11 @@ export default function SearchPage() {
     const [tvTotal, setTvTotal] = useState(0);
     const [activeTab, setActiveTab] = useState("movies");
     const [isFiltersVisible, setIsFiltersVisible] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const MOVIES_PER_PAGE = 20;
+    const [isFiltered, setIsFiltered] = useState(false);
+
 
     const [filters, setFilters] = useState({
         genre: "",
@@ -42,12 +47,49 @@ export default function SearchPage() {
     });
 
     useEffect(() => {
-        loadDefault(1);
-    }, []);
+        const tab = searchParams.get("tab") || "movies";
+        setActiveTab(tab);
+
+        const initialPage = Number(searchParams.get("page")) || 1;
+        setPage(initialPage);
+
+        if (tab !== "movies") {
+            void loadDefault(initialPage);
+            return;
+        }
+
+        const restoredFilters = {
+            genre: searchParams.get("genre") || "",
+            rating: Number(searchParams.get("rating")) || 0,
+            year: searchParams.get("year") || "",
+            minRevenue: Number(searchParams.get("minRevenue")) || 0,
+            maxRevenue: Number(searchParams.get("maxRevenue")) || 0
+        };
+
+        const hasFilters =
+            restoredFilters.genre ||
+            restoredFilters.year ||
+            restoredFilters.rating > 0 ||
+            restoredFilters.minRevenue > 0 ||
+            restoredFilters.maxRevenue > 0;
+
+        if (hasFilters) {
+            setFilters(restoredFilters);
+            setIsFiltered(true);
+            applyFilters(restoredFilters);
+        } else {
+            setIsFiltered(false);
+            void loadDefault(initialPage);
+        }    }, []);
 
     useEffect(() => {
         setPage(1);
-        handleSearch(query, 1);
+
+        if (query.trim()) {
+            handleSearch(query, 1);
+        } else {
+            void loadDefault(1);
+        }
     }, [activeTab]);
 
     async function loadDefault(page = 1) {
@@ -111,6 +153,8 @@ export default function SearchPage() {
             newFilters.rating === 0 &&
             (!newFilters.minRevenue || newFilters.minRevenue === 0) &&
             (!newFilters.maxRevenue || newFilters.maxRevenue === 0);
+
+        setPage(1);
 
         if (noFilters) {
             await loadDefault();
@@ -255,6 +299,23 @@ export default function SearchPage() {
         setTotalPages(data?.total_pages ?? 1);
     }
 
+    function handleClientPagination(newPage) {
+        setPage(newPage);
+        // Scroll to the top when changing page
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    const isCustomFiltered =
+        activeTab === "movies" && isFiltered;
+
+    const currentPageTotalPages = isCustomFiltered
+        ? Math.ceil(movies.length / MOVIES_PER_PAGE) // Calculate pages based on local array length
+        : totalPages; // Use the API's total pages
+
+    const currentTotalResults = isCustomFiltered
+        ? movies.length
+        : movieTotal;
+
     return (
         <div className="min-h-screen bg-background pt-24 pb-12">
             <div className="container mx-auto px-4">
@@ -306,7 +367,13 @@ export default function SearchPage() {
 
                                 <div className="lg:ml-0">
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                                        {movies.map((movie) => (
+                                        {(isCustomFiltered
+                                                ? movies.slice(
+                                                    (page - 1) * MOVIES_PER_PAGE,
+                                                    page * MOVIES_PER_PAGE
+                                                )
+                                                : movies
+                                        ).map((movie) => (
                                             <MovieCard
                                                 key={movie.id}
                                                 id={movie.id}
@@ -317,6 +384,7 @@ export default function SearchPage() {
                                                 onClick={() => navigate(`/movie/${movie.id}`)}
                                             />
                                         ))}
+
                                     </div>
                                 </div>
 
@@ -375,19 +443,53 @@ export default function SearchPage() {
                 <Button
                     variant="secondary"
                     disabled={page === 1}
-                    onClick={() => handleSearch(query, page - 1)}
+                    onClick={() => {
+                        const newPage = page - 1;
+                        setPage(newPage);
+
+                        if (isCustomFiltered) {
+                            handleClientPagination(newPage);
+                        } else {
+                            handleSearch(query, newPage);
+                        }
+
+                        setSearchParams(prev => {
+                            prev.set("page", newPage);
+                            prev.set("tab", activeTab);
+                            return prev;
+                        });
+
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
                 >
                     Previous
                 </Button>
 
                 <span className="text-sm text-muted-foreground">
-                    Page {page} / {totalPages}
-                </span>
+        Page {page} / {currentPageTotalPages}
+    </span>
 
                 <Button
                     variant="secondary"
-                    disabled={page === totalPages}
-                    onClick={() => handleSearch(query, page + 1)}
+                    disabled={page >= currentPageTotalPages || currentTotalResults === 0}
+                    onClick={() => {
+                        const newPage = page + 1;
+                        setPage(newPage);
+
+                        if (isCustomFiltered) {
+                            handleClientPagination(newPage);
+                        } else {
+                            handleSearch(query, newPage);
+                        }
+
+                        setSearchParams(prev => {
+                            prev.set("page", newPage);
+                            prev.set("tab", activeTab);
+                            return prev;
+                        });
+
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
                 >
                     Next
                 </Button>
@@ -398,17 +500,53 @@ export default function SearchPage() {
                     filters={activeTab === "movies" ? filters : tvFilters}
                     mode={activeTab === "movies" ? "movie" : "tv"}
                     onApply={(updatedFilters) => {
+
+                        // Checks if filters are empty before knowing which tab is loaded
+                        const noFilters =
+                            !updatedFilters.genre &&
+                            !updatedFilters.year &&
+                            updatedFilters.rating === 0 &&
+                            !updatedFilters.minRevenue &&
+                            !updatedFilters.maxRevenue;
+
                         if (activeTab === "movies") {
                             setFilters(updatedFilters);
-                            applyFilters(updatedFilters);
+
+                            if (noFilters) {
+                                setIsFiltered(false);
+                                setSearchParams({ tab: "movies" });
+                                void loadDefault(1);
+                            } else {
+                                setIsFiltered(true);
+
+                                setSearchParams({
+                                    tab: "movies",
+                                    genre: updatedFilters.genre || "",
+                                    rating: updatedFilters.rating || "",
+                                    year: updatedFilters.year || "",
+                                    minRevenue: updatedFilters.minRevenue || "",
+                                    maxRevenue: updatedFilters.maxRevenue || ""
+                                });
+
+                                applyFilters(updatedFilters);
+                            }
                         } else {
                             setTvFilters(updatedFilters);
-                            applyTVFilters(updatedFilters);
+
+                            if (noFilters) {
+                                setIsFiltered(false);
+                                loadDefault(1);
+                            } else {
+                                setIsFiltered(true);
+                                applyTVFilters(updatedFilters);
+                            }
                         }
+
                         setIsFiltersVisible(false);
                     }}
                     onClose={() => setIsFiltersVisible(false)}
                 />
+
             )}
 
         </div>
