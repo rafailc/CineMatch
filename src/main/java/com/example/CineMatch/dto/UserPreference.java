@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_preferences")
@@ -18,7 +19,7 @@ public class UserPreference {
 
     @Id
     @Column(name = "user_id")
-    private String userId;
+    private UUID userId;
 
     // Το genre_affinity είναι JSONB/TEXT στη βάση. Το διαβάζουμε ως String και το μετατρέπουμε.
     @Column(name = "genre_affinity")

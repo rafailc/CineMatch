@@ -10,6 +10,9 @@ import TvDetailPage from "./pages/TvDetails";
 import AboutUsPage from "./pages/About";
 import FavoritesPage from "./pages/FavoritesPage";
 import ProfilePage from "@/pages/PrifilePage.jsx";
+import Quiz from "./pages/Quiz";
+import NormalQuiz from "./pages/NormalQuiz";
+import RankedQuiz from "./pages/RankedQuiz";
 
 import ActorMatchPage from "./pages/ActorMatch";
 
@@ -105,7 +108,11 @@ export default function App() {
                             <ActorMatchPage />
                         </ProtectedRoute>
                     }
+
                 />
+                <Route path="/quiz" element={<Quiz />} />
+                <Route path="/quiz/normal" element={<NormalQuiz />} />
+                <Route path="/quiz/ranked" element={<RankedQuiz />} />
             </Routes>
         </>
     );
