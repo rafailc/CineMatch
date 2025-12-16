@@ -17,11 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatusCode;
 
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Optional;
-
+import java.util.*;
 
 
 @Service
@@ -31,11 +27,22 @@ public class QuizService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserPreferenceRepository userPreferenceRepository;
 
-    @Value("${huggingface.api.key}")
+//@Value("${huggingface.api.key}")
+    // private String apiKey;
+
+    @Value("${llm.api.key}")
     private String apiKey;
 
-    private static final String MODEL_ID = "meta-llama/Llama-2-7b-chat-hf";
-    private static final String HF_ENDPOINT = "https://router.huggingface.co/models/";
+    // private static final String GROQ_ENDPOINT =
+    //         "https://api.groq.com/openai/v1/chat/completions";
+    // private static final String MODEL_ID = "llama-3.1-8b-instant";
+    private static final String OPENROUTER_ENDPOINT =
+            "https://openrouter.ai/api/v1/chat/completions";
+
+    // Free & good
+    private static final String MODEL_ID =
+            "mistralai/mistral-7b-instruct";
+
 
 
     // CONSTRUCTOR: Χρειάζεται WebClient και Repository
@@ -64,7 +71,7 @@ public class QuizService {
     // =================================================================
     // 2. PERSONALIZED QUIZ (DATABASE DRIVEN)
     // =================================================================
-    public List<QuizQuestion> generatePersonalizedQuiz(String userId) throws Exception {
+    public List<QuizQuestion> generatePersonalizedQuiz(UUID userId) throws Exception {
 
         // 1. Διάβασμα Affinity από τη Βάση Δεδομένων
         Optional<UserPreference> userPrefOpt = userPreferenceRepository.findByUserId(userId);
@@ -90,7 +97,8 @@ public class QuizService {
                 .toList();
 
         // 4. Δημιουργία Prompt
-        String prompt = buildPersonalizedQuizPrompt(top3Genres);
+        String prompt = buildPersonalizedQuizPrompt(top3Genres)
+                + "\nRandom seed: " + UUID.randomUUID();
         String jsonResponse = callLlmApi(prompt);
         return parseLlmResponse(jsonResponse);
     }
@@ -99,11 +107,23 @@ public class QuizService {
         String genreList = String.join(", ", genres);
 
         return String.format(
-                "[INST] You are a cinema quiz generator. Generate 10 multiple-choice questions (4 options each) focused specifically on the following cinema genres: %s. "
-                        + "Return the output as a single, valid JSON array conforming to the QuizQuestion POJO schema (questionText, options, correctAnswerIndex: 0-3, explanation). "
-                        + "Do not include any text, markdown, or commentary outside the JSON array. [/INST]",
-                genreList
+                "You are a cinema quiz generator.\n" +
+                        "Generate 10 COMPLETELY DIFFERENT multiple-choice questions (4 options each).\n" +
+                        "Rules:\n" +
+                        "- Do NOT reuse famous or common examples repeatedly\n" +
+                        "- Avoid starting with the same movie every time\n" +
+                        "- Use a RANDOM mix of mainstream, cult, and lesser-known films\n" +
+                        "- Vary the order of difficulty\n" +
+                        "- Each question must be independent\n\n" +
+                        "Genres to focus on: %s\n\n" +
+                        "Return ONLY a valid JSON array with this schema:\n" +
+                        "[{questionText, options, correctAnswerIndex, explanation}]\n" +
+                        "No extra text.\n\n" +
+                        "Randomization token: %s",
+                genreList,
+                UUID.randomUUID()
         );
+
     }
 
     // =================================================================
@@ -114,55 +134,57 @@ public class QuizService {
         if (apiKey == null || apiKey.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
-                    "HUGGINGFACE_API_KEY is missing."
+                    "OpenRouter API key is missing."
             );
         }
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("inputs", prompt);
-
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("max_new_tokens", 1500);
-        parameters.put("do_sample", false);
-        parameters.put("temperature", 0.1);
-        parameters.put("stop", List.of("[/INST]", "```"));
-
-        requestBody.put("parameters", parameters);
-
-        String url = HF_ENDPOINT + MODEL_ID;
-
+        requestBody.put("model", MODEL_ID);
+        requestBody.put("messages", List.of(
+                Map.of("role", "user", "content", prompt)
+        ));
+        requestBody.put("temperature", 0.8);
+        requestBody.put("max_tokens", 1500);
 
         try {
-            List<Map<String, String>> response = webClient.post()
-                    .uri(url)
+            Map<String, Object> response = webClient.post()
+                    .uri(OPENROUTER_ENDPOINT)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .header("HTTP-Referer", "http://localhost:8080") // required
+                    .header("X-Title", "CineMatch")                  // required
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, clientResponse -> {
-                        return clientResponse.bodyToMono(String.class)
-                                .map(errorBody -> new ResponseStatusException(
-                                        clientResponse.statusCode(),
-                                        "LLM API Error: " + errorBody
-                                ));
-                    })
-                    .bodyToMono(new ParameterizedTypeReference<List<Map<String, String>>>() {})
+                    .onStatus(HttpStatusCode::isError, clientResponse ->
+                            clientResponse.bodyToMono(String.class)
+                                    .map(body ->
+                                            new ResponseStatusException(
+                                                    clientResponse.statusCode(),
+                                                    "OpenRouter API Error: " + body
+                                            )
+                                    )
+                    )
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .block();
 
-            if (response == null || response.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "LLM returned empty response.");
-            }
 
-            String generatedText = response.get(0).get("generated_text");
-            return cleanLlmOutput(generatedText); // Η μέθοδος υπάρχει παρακάτω
+            List<Map<String, Object>> choices =
+                    (List<Map<String, Object>>) response.get("choices");
+
+            Map<String, Object> message =
+                    (Map<String, Object>) choices.get(0).get("message");
+
+            return message.get("content").toString();
 
         } catch (Exception e) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error calling LLM API: " + e.getMessage()
+                    "OpenRouter API error: " + e.getMessage()
             );
         }
     }
+
+
 
 
     // =================================================================
