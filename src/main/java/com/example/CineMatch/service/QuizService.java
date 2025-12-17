@@ -27,15 +27,11 @@ public class QuizService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserPreferenceRepository userPreferenceRepository;
 
-//@Value("${huggingface.api.key}")
-    // private String apiKey;
+
 
     @Value("${llm.api.key}")
     private String apiKey;
 
-    // private static final String GROQ_ENDPOINT =
-    //         "https://api.groq.com/openai/v1/chat/completions";
-    // private static final String MODEL_ID = "llama-3.1-8b-instant";
     private static final String OPENROUTER_ENDPOINT =
             "https://openrouter.ai/api/v1/chat/completions";
 
@@ -57,16 +53,53 @@ public class QuizService {
     public List<QuizQuestion> generateRankedQuiz() throws Exception {
         String prompt = buildRankedQuizPrompt();
         String jsonResponse = callLlmApi(prompt);
-        return parseLlmResponse(jsonResponse);
+
+        System.out.println("RAW LLM OUTPUT:\n" + jsonResponse);
+
+        String cleaned = cleanLlmOutput(jsonResponse);
+        return parseLlmResponse(cleaned);
     }
 
+
     private String buildRankedQuizPrompt() {
-        return String.format(
-                "[INST] You are a cinema quiz generator. Generate 10 multiple-choice questions (4 options each) covering general cinema knowledge. "
-                        + "Return the output as a single, valid JSON array conforming to the QuizQuestion POJO schema (questionText, options, correctAnswerIndex: 0-3, explanation). "
-                        + "Do not include any text, markdown, or commentary outside the JSON array. [/INST]"
-        );
+        return """
+You are a professional cinema trivia engine.
+
+TASK:
+Generate EXACTLY 10 ranked-competition questions about cinema.
+
+RULES (VERY IMPORTANT):
+- Difficulty: medium → hard (film history, directors, awards, techniques)
+- No subjective questions
+- No opinion-based questions
+- One clearly correct answer per question
+- Avoid very famous beginner questions
+- Avoid repeating the same movie or director
+- Questions must be independent
+
+FORMAT RULES (CRITICAL):
+- Return ONLY a valid JSON ARRAY
+- Do NOT include markdown
+- Do NOT include explanations outside the JSON
+- Do NOT include any text before or after the JSON
+
+JSON SCHEMA (MUST MATCH EXACTLY):
+[
+  {
+    "questionText": "string",
+    "options": ["string", "string", "string", "string"],
+    "correctAnswerIndex": 0,
+    "explanation": "string"
+  }
+]
+
+FAILURE CONDITIONS:
+- If you include ANY text outside the JSON array, the response is invalid.
+
+Generate now.
+""";
     }
+
 
     // =================================================================
     // 2. PERSONALIZED QUIZ (DATABASE DRIVEN)
@@ -252,5 +285,21 @@ public class QuizService {
             }
         }
         return finalScore;
+    }
+    public int calculateRankedScore(
+            int correct,
+            int wrong,
+            int timeTakenSeconds
+    ) {
+        int POINTS_PER_CORRECT = 50;
+        int PENALTY_PER_WRONG = 30;
+
+        int baseScore = (correct * POINTS_PER_CORRECT)
+                - (wrong * PENALTY_PER_WRONG);
+
+        int maxTime = 120; // 2 minutes
+        int timeBonus = Math.max(0, maxTime - timeTakenSeconds);
+
+        return Math.max(0, baseScore + timeBonus);
     }
 }
