@@ -2,6 +2,7 @@ package com.example.CineMatch.controller;
 
 import com.example.CineMatch.dto.QuizQuestion;
 import com.example.CineMatch.dto.QuizSubmission;
+import com.example.CineMatch.dto.RankedScoreRequest;
 import com.example.CineMatch.service.QuizService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,11 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/quiz")
+@CrossOrigin(
+        origins = "http://localhost:5173",
+        allowedHeaders = "*",
+        methods = { RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS }
+)
 public class QuizController {
 
     private final QuizService quizService;
@@ -34,7 +40,18 @@ public class QuizController {
         return ResponseEntity.ok(questions);
     }
 
-
+    @PostMapping("/ranked/score")
+    public int calculateRankedScore(@RequestBody RankedScoreRequest request) {
+        return quizService.calculateRankedScore(
+                request.getCorrect(),
+                request.getWrong(),
+                request.getTimeTakenSeconds()
+        );
+    }
+    @GetMapping("/ranked")
+    public List<QuizQuestion> getRankedQuiz() throws Exception {
+        return quizService.generateRankedQuiz();
+    }
     // SUBMIT (Ranked  Personalized)
     // Endpoint: /api/quiz/submit
     @PostMapping("/submit")
