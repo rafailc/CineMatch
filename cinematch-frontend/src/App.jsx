@@ -15,6 +15,8 @@ import NormalQuiz from "./pages/NormalQuiz";
 import RankedQuiz from "./pages/RankedQuiz";
 
 import ActorMatchPage from "./pages/ActorMatch";
+import MediaPage from "@/pages/MediaPage.jsx";
+
 
 export default function App() {
     const location = useLocation();
@@ -113,6 +115,17 @@ export default function App() {
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/quiz/normal" element={<NormalQuiz />} />
                 <Route path="/quiz/ranked" element={<RankedQuiz />} />
+
+                <Route
+                    path="/media"
+                    element={
+                        <ProtectedRoute>
+                            <MediaPage />
+                        </ProtectedRoute>
+                    }
+
+                />
+
             </Routes>
         </>
     );
