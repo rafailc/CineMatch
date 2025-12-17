@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import com.example.CineMatch.dto.GenreAffinity;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +25,7 @@ public class UserPreference {
 
     // Το genre_affinity είναι JSONB/TEXT στη βάση. Το διαβάζουμε ως String και το μετατρέπουμε.
     @Column(name = "genre_affinity")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String genreAffinityJson;
 
     // Μέθοδος μετατροπής του JSON string σε List<GenreAffinity>

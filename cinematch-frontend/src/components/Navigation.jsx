@@ -42,7 +42,7 @@ export default function Navigation() {
         { path: "/search", Icon: Search, label: "Search" },
         { path: "/quiz", Icon: Brain, label: "Quiz" },
         { path: "/actor-match", Icon: Sparkles, label: "Actor Match" },
-        { path: "/reviews", Icon: MessageSquare, label: "Reviews" },
+        { path: "/media", Icon: MessageSquare, label: "Media" },
     ];
 
     return (
