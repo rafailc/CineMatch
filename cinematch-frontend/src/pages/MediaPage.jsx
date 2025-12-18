@@ -5,6 +5,7 @@ import {
     PlusCircle, Clapperboard, Plus, X, Camera,
     Image as ImageIcon, Loader2, RefreshCcw, Check
 } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 const STORIES = [
     { id: 'me', username: 'Your Story', img: '', isUser: true },
@@ -18,6 +19,7 @@ const STORIES = [
 export default function MediaPage() {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -27,12 +29,22 @@ export default function MediaPage() {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [facingMode, setFacingMode] = useState('environment'); //user = selfie, environment = back camera
+    const [movieTitle, setMovieTitle] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [tmdbId, setTmdbId] = useState(null);
+    const [tmdbType, setTmdbType] = useState(null);
+    const [cameraMode, setCameraMode] = useState('photo');
+    const [isRecording, setIsRecording] = useState(false);
+    const API_BASE = "http://localhost:8080/api/tmdb";
 
     // Refs
     const fileInputRef = useRef(null);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const streamRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const chunksRef = useRef([]);
 
     useEffect(() => {
         fetchPosts();
@@ -83,19 +95,21 @@ export default function MediaPage() {
         setFacingMode(mode);
 
         try {
+
+            // Updated constraints to include Audio
+            const constraints = {
+                video: { facingMode: mode === 'environment' ? { exact: mode } : mode },
+                audio: true
+            };
+
             let stream;
 
 
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        // On mobile, 'exact' forces the specific camera preventing the popup menu
-                        facingMode: { exact: mode }
-                    }
-                });
-            } catch (strictError) {
-
-                console.log("Strict camera mode failed, trying loose mode...");
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+                console.log("Audio mode failed, trying video only...", err);
+                // Fallback: Try again without audio
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: mode }
                 });
@@ -107,7 +121,6 @@ export default function MediaPage() {
             }
         } catch (err) {
             console.error("Error accessing camera:", err);
-            // Don't show alert if it was just a user cancellation
             if (err.name !== 'NotAllowedError' && err.name !== 'NotFoundError') {
                 alert("Could not start camera. Please check permissions.");
             }
@@ -121,6 +134,7 @@ export default function MediaPage() {
             streamRef.current = null;
         }
         setIsCameraActive(false);
+        setIsRecording(false);
     };
 
     const switchCamera = () => {
@@ -154,6 +168,61 @@ export default function MediaPage() {
             }, 'image/jpeg');
         }
     };
+
+    const startRecording = () => {
+        if (!streamRef.current) return;
+
+        chunksRef.current = [];
+        // Use vp9 or default codecs
+        const options = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
+            ? { mimeType: 'video/webm; codecs=vp9' }
+            : { mimeType: 'video/webm' };
+
+        try {
+            const recorder = new MediaRecorder(streamRef.current, options);
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunksRef.current.push(e.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+                const file = new File([blob], "camera-video.webm", { type: 'video/webm' });
+                setSelectedFile(file);
+                setPreviewUrl(URL.createObjectURL(file));
+                stopCamera();
+            };
+
+            recorder.start();
+            setIsRecording(true);
+            mediaRecorderRef.current = recorder;
+        } catch (err) {
+            console.error("Failed to start MediaRecorder", err);
+            alert("Video recording not supported on this device.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const handleShutter = () => {
+        if (cameraMode === 'photo') {
+            capturePhoto();
+        } else {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+    };
+
     // --- STANDARD FILE PICKER ---
     const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -197,7 +266,10 @@ export default function MediaPage() {
                     media_url: publicUrl,
                     caption: newCaption,
                     username: "temp",
-                    media_type: selectedFile.type.startsWith('video') ? 'video' : 'image'
+                    media_type: selectedFile.type.startsWith('video') ? 'video' : 'image',
+                    movie_title: movieTitle,
+                    tmdb_id: tmdbId,
+                    tmdb_type: tmdbType
                 });
 
             if (dbError) throw dbError;
@@ -243,6 +315,30 @@ export default function MediaPage() {
         }));
     };
 
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            // Only search if user typed at least 3 chars
+            if (movieTitle.length > 2 && showSuggestions) {
+                try {
+
+                    const response = await fetch(`${API_BASE}/search/movies?q=${encodeURIComponent(movieTitle)}`);
+                    const data = await response.json();
+
+
+                    if (data.results) {
+                        setSuggestions(data.results.slice(0, 5)); // Limit to top 5
+                    }
+                } catch (error) {
+                    console.error("Search failed", error);
+                }
+            } else {
+                setSuggestions([]);
+            }
+        }, 500); // Wait 500ms after typing stops
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [movieTitle, showSuggestions]);
+
     return (
         <div className="min-h-screen bg-background text-foreground pt-20 relative">
             <main className="container max-w-xl mx-auto px-0 md:px-4 py-6">
@@ -274,10 +370,38 @@ export default function MediaPage() {
 
                     {!loading && posts.map((post) => (
                         <article key={post.id} className="bg-background md:border border-white/10 md:rounded-xl overflow-hidden mb-4">
+                            {/* --- HEADER --- */}
                             <div className="flex items-center justify-between p-3">
-                                <div className="flex items-center gap-3 cursor-pointer">
-                                    <img src={post.user_img} alt={post.username} className="w-8 h-8 rounded-full object-cover ring-1 ring-white/20" />
-                                    <span className="font-semibold text-sm hover:text-primary transition-colors">{post.username}</span>
+                                <div className="flex items-center gap-3">
+                                    {/* Avatar */}
+                                    <img
+                                        src={post.user_img}
+                                        alt={post.username}
+                                        className="w-10 h-10 rounded-full object-cover ring-1 ring-white/20"
+                                    />
+
+                                    {/* Text Container  */}
+                                    <div className="flex flex-col">
+                                        {/* 1. Username */}
+                                        <span className="font-semibold text-sm hover:text-primary transition-colors cursor-pointer leading-tight">
+                                            {post.username}
+                                        </span>
+
+                                        {/* Movie Title */}
+                                        {post.movie_title && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const type = post.tmdb_type === 'series' ? 'series' : 'movie';
+                                                    navigate(`/${type}/${post.tmdb_id}`);
+                                                }}
+                                                className="text-xs text-blue-400 hover:text-blue-300 hover:underline text-left font-medium"
+                                            >
+                                                {post.movie_title}
+                                            </button>
+                                        )}
+
+                                    </div>
                                 </div>
                                 <MoreHorizontal className="w-5 h-5 text-muted-foreground cursor-pointer" />
                             </div>
@@ -329,7 +453,7 @@ export default function MediaPage() {
                     <div className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
 
                         <div className="flex items-center justify-between p-4 border-b border-white/10">
-                            <h2 className="font-semibold text-lg">{isCameraActive ? 'Take Photo' : 'Create new post'}</h2>
+                            <h2 className="font-semibold text-lg">{isCameraActive ? 'New Post' : 'Create new post'}</h2>
                             <button
                                 onClick={() => {
                                     stopCamera();
@@ -359,37 +483,63 @@ export default function MediaPage() {
                                         ref={videoRef}
                                         autoPlay
                                         playsInline
+                                        muted={true}
                                         className="w-full h-full object-cover"
                                     />
-                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-4">
 
-                                        {/* Close Button */}
+                                        {/* 1. Mode Switcher (Photo/Video) */}
+                                        <div className="flex bg-black/50 rounded-full p-1 backdrop-blur-sm">
+                                            <button
+                                                onClick={() => setCameraMode('photo')}
+                                                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${cameraMode === 'photo' ? 'bg-white text-black' : 'text-gray-300'}`}
+                                            >
+                                                Photo
+                                            </button>
+                                            <button
+                                                onClick={() => setCameraMode('video')}
+                                                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${cameraMode === 'video' ? 'bg-white text-black' : 'text-gray-300'}`}
+                                            >
+                                                Video
+                                            </button>
+                                        </div>
 
-                                        <button
-                                            onClick={stopCamera}
-                                            className="p-3 bg-red-500/80 rounded-full text-white backdrop-blur-md"
-                                        >
-                                            <X size={24} />
-                                        </button>
+                                        <div className="flex w-full justify-between items-center px-4">
+                                            {/* Close Button */}
+                                            <button
+                                                onClick={stopCamera}
+                                                className="p-3 bg-white/10 rounded-full text-white backdrop-blur-md hover:bg-white/20"
+                                            >
+                                                <X size={20} />
+                                            </button>
 
-                                        {/*Capture Button*/}
+                                            {/* 2. Capture Button (Photo/Video) */}
+                                            <button
+                                                onClick={handleShutter}
+                                                className={`rounded-full transition-all duration-300 flex items-center justify-center border-4 
+                                                    ${cameraMode === 'video'
+                                                    ? (isRecording ? 'w-16 h-16 border-gray-300 bg-red-500' : 'w-16 h-16 border-gray-300 bg-red-600')
+                                                    : 'w-16 h-16 border-gray-300 bg-white'
+                                                }`}
+                                            >
+                                                {/* Inner indicator for video recording state */}
+                                                {cameraMode === 'video' && isRecording && (
+                                                    <div className="w-6 h-6 bg-white rounded-sm" />
+                                                )}
+                                                {/* Visual indicator for photo */}
+                                                {cameraMode === 'photo' && (
+                                                    <div className="w-14 h-14 bg-gray-200 rounded-full border-2 border-white/50" />
+                                                )}
+                                            </button>
 
-                                        <button
-                                            onClick={capturePhoto}
-                                            className="p-4 bg-white rounded-full text-black hover:scale-110 transition-transform border-4 border-gray-300"
-                                        >
-                                            <div className="w-4 h-4 bg-black rounded-full" />
-                                        </button>
-
-                                        {/*Flip Camera Button*/}
-
-                                        <button
-                                            onClick={switchCamera}
-                                            className="p-3 bg-gray-800/80 rounded-full text-white backdrop-blur-md hover:bg-gray-700 transition"
-                                        >
-                                            <RefreshCcw size={24} />
-                                        </button>
-
+                                            {/* Flip Camera */}
+                                            <button
+                                                onClick={switchCamera}
+                                                className="p-3 bg-white/10 rounded-full text-white backdrop-blur-md hover:bg-white/20"
+                                            >
+                                                <RefreshCcw size={20} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -434,15 +584,78 @@ export default function MediaPage() {
                                         </div>
                                     )}
 
-                                    {/* FORM */}
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-300">Caption</label>
-                                        <textarea
-                                            placeholder="Write a caption..."
-                                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-sm h-24 resize-none focus:outline-none focus:border-blue-500 transition-colors"
-                                            value={newCaption}
-                                            onChange={(e) => setNewCaption(e.target.value)}
-                                        />
+                                    <div className="space-y-3">
+
+                                        {/* Autocomplete Movie Input */}
+                                        <div className="space-y-1 relative">
+                                            <label className="text-xs font-medium text-gray-400">Watching (Optional)</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Inception, Breaking Bad..."
+                                                    className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 transition-colors text-white"
+                                                    value={movieTitle}
+                                                    onChange={(e) => {
+                                                        setMovieTitle(e.target.value);
+                                                        setShowSuggestions(true); // Re-open dropdown when typing
+                                                    }}
+                                                    onFocus={() => setShowSuggestions(true)} // Open when clicked
+                                                />
+
+                                                {/* Dropdown List */}
+                                                {showSuggestions && suggestions.length > 0 && (
+                                                    <ul className="absolute z-50 w-full bg-[#1a1a1a] border border-white/10 rounded-lg mt-1 shadow-xl max-h-48 overflow-y-auto">
+                                                        {suggestions.map((movie) => (
+                                                            <li
+                                                                key={movie.id}
+                                                                onClick={() => {
+
+                                                                    setMovieTitle(movie.title || movie.name);
+                                                                    setSuggestions([]);
+                                                                    setShowSuggestions(false);
+                                                                    setTmdbId(movie.id); //save tmdb id for later
+                                                                    setTmdbType(movie.title ? 'movie' : 'series');
+                                                                }}
+                                                                className="flex items-center gap-3 p-2 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"
+                                                            >
+                                                                {/* Movie Poster Thumbnail */}
+                                                                {movie.poster_path ? (
+                                                                    <img
+                                                                        src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
+                                                                        alt={movie.title}
+                                                                        className="w-8 h-12 object-cover rounded"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-8 h-12 bg-gray-700 rounded flex items-center justify-center">
+                                                                        <Clapperboard size={12} className="text-gray-400"/>
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm text-white font-medium">
+                                                                        {movie.title || movie.name}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {movie.release_date ? movie.release_date.split('-')[0] : 'Unknown'}
+                                                                    </span>
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Caption Input */}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-gray-400">Caption</label>
+                                            <textarea
+                                                placeholder="Write a caption..."
+                                                className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-sm h-20 resize-none focus:outline-none focus:border-blue-500 transition-colors text-white"
+                                                value={newCaption}
+                                                onChange={(e) => setNewCaption(e.target.value)}
+                                            />
+                                        </div>
                                     </div>
 
                                     <button
