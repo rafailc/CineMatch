@@ -13,6 +13,7 @@ import ProfilePage from "@/pages/PrifilePage.jsx";
 import Quiz from "./pages/Quiz";
 import NormalQuiz from "./pages/NormalQuiz";
 import RankedQuiz from "./pages/RankedQuiz";
+import RankedStart from "./pages/RankedStart";
 
 import ActorMatchPage from "./pages/ActorMatch";
 import MediaPage from "@/pages/MediaPage.jsx";
@@ -114,10 +115,11 @@ export default function App() {
                 />
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/quiz/normal" element={<NormalQuiz />} />
-                <Route path="/quiz/ranked" element={<RankedQuiz />} />
+                <Route path="/quiz/ranked" element={<RankedStart />} />
+                <Route path="/quiz/ranked/play" element={<RankedQuiz />} />
 
                 <Route
-                    path="/media"
+                    path="/CineGram"
                     element={
                         <ProtectedRoute>
                             <MediaPage />
