@@ -90,30 +90,26 @@ jobs:
               
               if (!baseTag) baseTag = lastTag; // Fallback
               
-              // --- ΤΟ ΚΟΛΠΟ ΓΙΑ ΤΟ WHAT'S CHANGED ---
-              // Ζητάμε από το GitHub να δημιουργήσει τα notes ΟΧΙ από το προηγούμενο patch,
-              // αλλά από το baseTag (π.χ. v1.13.0) μέχρι το τώρα.
+              
               let autoNotes = "";
               try {
                 const response = await github.rest.repos.generateReleaseNotes({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   tag_name: newVersion,
-                  previous_tag_name: baseTag // <--- ΑΥΤΟ ΛΥΝΕΙ ΤΟ ΠΡΟΒΛΗΜΑ ΜΕ ΤΑ ΠΑΛΙΑ ISSUES
+                  previous_tag_name: baseTag 
                 });
                 autoNotes = response.data.body;
               } catch (e) { console.log("Auto notes failed"); }
 
-              // Καθαρίζουμε το Link στο τέλος για να βάλουμε το δικό μας (αν θέλουμε)
-              // Ή το αφήνουμε όπως είναι, αλλά τώρα θα είναι σωστό.
-              // Επίσης, προσπαθούμε να καθαρίσουμε τα "minor:" από τη λίστα του GitHub (λίγο δύσκολο με regex αλλά προσπαθούμε)
+             
               autoNotes = autoNotes.replace(/minor:\s/gi, ""); 
 
               // --- ΧΤΙΣΙΜΟ ΤΟΥ ΤΕΛΙΚΟΥ ΚΕΙΜΕΝΟΥ ---
               // Πρώτη γραμμή: Ο καθαρός τίτλος (χωρίς minor:)
               let finalBody = `## 🚀 ${cleanTitle}\n\n`;
               
-              // Ενσωματώνουμε τα generated notes (που τώρα θα έχουν ΟΛΑ τα issues)
+              // Ενσωματώνουμε τα generated notes 
               finalBody += autoNotes;
 
               await github.rest.repos.createRelease({
@@ -122,6 +118,6 @@ jobs:
                 tag_name: newVersion,
                 name: `${newVersion} - ${cleanTitle}`,
                 body: finalBody,
-                generate_release_notes: false // Το έχουμε ήδη γεννήσει χειροκίνητα πιο πάνω
+                generate_release_notes: false 
               });
             }

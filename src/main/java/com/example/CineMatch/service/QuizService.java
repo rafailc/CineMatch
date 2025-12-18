@@ -51,39 +51,65 @@ public class QuizService {
     // 1. RANKED QUIZ
     // =================================================================
     public List<QuizQuestion> generateRankedQuiz() throws Exception {
-        String prompt = buildRankedQuizPrompt();
-        String jsonResponse = callLlmApi(prompt);
+        String prompt = buildRankedQuizPrompt()
+                + "\nRandom seed: " + UUID.randomUUID();
 
-        System.out.println("RAW LLM OUTPUT:\n" + jsonResponse);
+        int attempts = 0;
+        Exception lastError = null;
 
-        String cleaned = cleanLlmOutput(jsonResponse);
-        return parseLlmResponse(cleaned);
+        while (attempts < 3) {
+            try {
+                String jsonResponse = callLlmApi(prompt);
+                String cleaned = cleanLlmOutput(jsonResponse);
+                return parseLlmResponse(cleaned);
+            } catch (Exception e) {
+                lastError = e;
+                attempts++;
+            }
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to generate valid ranked quiz after retries",
+                lastError
+        );
     }
 
 
     private String buildRankedQuizPrompt() {
         return """
-You are a professional cinema trivia engine.
+You are a professional cinema trivia engine used in a ranked competitive game.
 
 TASK:
-Generate EXACTLY 10 ranked-competition questions about cinema.
+Generate EXACTLY 10 cinema trivia questions.
 
-RULES (VERY IMPORTANT):
-- Difficulty: medium → hard (film history, directors, awards, techniques)
-- No subjective questions
-- No opinion-based questions
-- One clearly correct answer per question
-- Avoid very famous beginner questions
-- Avoid repeating the same movie or director
-- Questions must be independent
+ERA CONSTRAINT (VERY IMPORTANT):
+- At least 6 questions MUST be about films released in the year 2000 or later
+- Remaining questions may include late 1990s at earliest
+- Avoid pre-1990 cinema unless absolutely necessary
 
-FORMAT RULES (CRITICAL):
-- Return ONLY a valid JSON ARRAY
-- Do NOT include markdown
-- Do NOT include explanations outside the JSON
-- Do NOT include any text before or after the JSON
+DIFFICULTY RULES:
+- Difficulty: medium to hard
+- Modern difficulty is allowed (cinematography, festivals, international cinema, directors, production facts)
+- Do NOT rely on silent-era or golden-age cinema to create difficulty
 
-JSON SCHEMA (MUST MATCH EXACTLY):
+CONTENT RULES:
+- No subjective or opinion-based questions
+- One and only one correct answer per question
+- No repeating movies, directors, actors, or franchises
+- Each question must cover a DIFFERENT film or topic
+
+ANTI-REPETITION:
+- Assume the user has played before
+- Avoid common trivia patterns
+- Prefer less obvious but verifiable facts
+
+FORMAT (STRICT):
+- Output ONLY a valid JSON array
+- No markdown
+- No text before or after JSON
+
+JSON SCHEMA:
 [
   {
     "questionText": "string",
@@ -93,8 +119,7 @@ JSON SCHEMA (MUST MATCH EXACTLY):
   }
 ]
 
-FAILURE CONDITIONS:
-- If you include ANY text outside the JSON array, the response is invalid.
+If you violate ANY rule, the output is invalid.
 
 Generate now.
 """;
@@ -240,29 +265,33 @@ Generate now.
     }
 
     private String cleanLlmOutput(String text) {
-        // Διορθώθηκε η αναφορά (cleanLlmOutput)
-        if (text == null) return "";
+        if (text == null) {
+            throw new IllegalArgumentException("LLM returned null output");
+        }
+
         text = text.trim();
 
-        if (text.contains("[/INST]")) {
-            text = text.substring(text.indexOf("[/INST]") + 7).trim();
-        }
-
-        if (text.startsWith("```json")) {
-            text = text.substring(7).trim();
-        }
-        if (text.endsWith("```")) {
-            text = text.substring(0, text.length() - 3).trim();
-        }
-
-        if (text.contains("[")) {
-            int startIndex = text.indexOf('[');
-            int endIndex = text.lastIndexOf(']');
-            if (startIndex != -1 && endIndex != -1) {
-                return text.substring(startIndex, endIndex + 1);
+        // Remove markdown fences
+        if (text.startsWith("```")) {
+            int firstNewLine = text.indexOf("\n");
+            if (firstNewLine != -1) {
+                text = text.substring(firstNewLine + 1);
             }
         }
-        return text;
+
+        if (text.endsWith("```")) {
+            text = text.substring(0, text.length() - 3);
+        }
+
+        // Extract STRICT JSON array
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+
+        if (start == -1 || end == -1 || end <= start) {
+            throw new IllegalArgumentException("LLM output does not contain valid JSON array");
+        }
+
+        return text.substring(start, end + 1).trim();
     }
 
     public int calculateScore(List<QuizQuestion> originalQuestions, List<UserAnswer> userAnswers) {
@@ -300,6 +329,6 @@ Generate now.
         int maxTime = 120; // 2 minutes
         int timeBonus = Math.max(0, maxTime - timeTakenSeconds);
 
-        return Math.max(0, baseScore + timeBonus);
+        return baseScore + timeBonus;
     }
 }
