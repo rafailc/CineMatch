@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,9 +12,12 @@ async function loadModels() {
     if (modelsLoaded) return;
 
     const MODEL_URL = "/models";
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    if (faceapi.nets.ssdMobilenetv1.params) return;
+    await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    ]);
 
     modelsLoaded = true;
 }
@@ -59,6 +62,7 @@ export default function ActorMatchPage() {
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState("");
     const [results, setResults] = useState(null);
+    const [isModelReady, setIsModelReady] = useState(false);
 
     const fileInputRef = useRef(null);
     const imgRef = useRef(null);
@@ -68,6 +72,31 @@ export default function ActorMatchPage() {
     const [stream, setStream] = useState(null);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
+
+    useEffect(() => {
+        const initFaceApi = async () => {
+            try {
+                // 1. Wait for TensorFlow to be ready (Fixes the "backend" error)
+                await faceapi.tf.ready();
+
+                // 2. Load the models immediately so they are ready when user clicks
+                await loadModels();
+
+                console.log("FaceAPI & TFJS are ready");
+                setIsModelReady(true);
+            } catch (error) {
+                console.error("Initialization Failed:", error);
+                toast({
+                    title: "Initialization Error",
+                    description: "Failed to load AI models. Please refresh.",
+                    variant: "destructive"
+                });
+            }
+        };
+
+        initFaceApi();
+    }, [toast]);
+
 
     // Επιλογή αρχείου
     const handleFileSelect = useCallback(

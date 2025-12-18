@@ -265,33 +265,29 @@ Generate now.
     }
 
     private String cleanLlmOutput(String text) {
-        if (text == null) {
-            throw new IllegalArgumentException("LLM returned null output");
-        }
-
+        // Διορθώθηκε η αναφορά (cleanLlmOutput)
+        if (text == null) return "";
         text = text.trim();
 
-        // Remove markdown fences
-        if (text.startsWith("```")) {
-            int firstNewLine = text.indexOf("\n");
-            if (firstNewLine != -1) {
-                text = text.substring(firstNewLine + 1);
+        if (text.contains("[/INST]")) {
+            text = text.substring(text.indexOf("[/INST]") + 7).trim();
+        }
+
+        if (text.startsWith("```json")) {
+            text = text.substring(7).trim();
+        }
+        if (text.endsWith("```")) {
+            text = text.substring(0, text.length() - 3).trim();
+        }
+
+        if (text.contains("[")) {
+            int startIndex = text.indexOf('[');
+            int endIndex = text.lastIndexOf(']');
+            if (startIndex != -1 && endIndex != -1) {
+                return text.substring(startIndex, endIndex + 1);
             }
         }
-
-        if (text.endsWith("```")) {
-            text = text.substring(0, text.length() - 3);
-        }
-
-        // Extract STRICT JSON array
-        int start = text.indexOf('[');
-        int end = text.lastIndexOf(']');
-
-        if (start == -1 || end == -1 || end <= start) {
-            throw new IllegalArgumentException("LLM output does not contain valid JSON array");
-        }
-
-        return text.substring(start, end + 1).trim();
+        return text;
     }
 
     public int calculateScore(List<QuizQuestion> originalQuestions, List<UserAnswer> userAnswers) {

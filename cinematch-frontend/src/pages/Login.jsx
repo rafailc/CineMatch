@@ -13,6 +13,7 @@ export default function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [displayName, setDisplayName] = useState("");
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -69,7 +70,12 @@ export default function Login() {
         e.preventDefault();
         const { data, error } = await supabase.auth.signUp({
             email,
-            password
+            password,
+            options: {
+                data: {
+                    name: displayName,
+                }
+            }
         });
 
         if (error) {
@@ -233,6 +239,29 @@ export default function Login() {
                             <p className="description">
                                 Create your account in no time and enjoy the experience.
                             </p>
+                        </div>
+
+                        {/* DISPLAY NAME */}
+                        <div className="input_container">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                className="icon"
+                            >
+                                <path stroke="#141B34" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4" stroke="#141B34" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"/>
+                            </svg>
+
+                            <input
+                                type="text"
+                                placeholder="Display Name"
+                                className="input_field"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                            />
                         </div>
 
                         {/* EMAIL */}
