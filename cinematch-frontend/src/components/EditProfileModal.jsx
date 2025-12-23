@@ -11,7 +11,7 @@ import {useNavigate} from "react-router-dom";
 
 export default function EditProfileModal({ open, onClose, user }) {
     const navigate = useNavigate();
-    const [username, setUsername] = useState(user?.user_metadata?.name || "");
+    const [username, setUsername] = useState(user?.username || "");
     const [email, setEmail] = useState("");
     const [confirmEmail, setConfirmEmail] = useState("");
 
@@ -71,16 +71,21 @@ export default function EditProfileModal({ open, onClose, user }) {
             // --------------------------------------
             console.log("Updating username…");
 
-            const { error: usernameError } = await supabase.auth.updateUser({
-                data: { name: username }
-            });
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ username: username })
+                .eq('id', user.id);
 
-            if (usernameError) {
-                console.error(usernameError);
+            if (profileError) {
+                console.error(profileError);
                 toast.error("Failed to update username.");
                 setLoading(false);
                 return;
             }
+
+            await supabase.auth.updateUser({
+                data: {name: username}
+            });
 
             // --------------------------------------
             // UPDATE EMAIL
