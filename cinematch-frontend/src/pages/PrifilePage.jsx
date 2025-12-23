@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, User, Edit } from "lucide-react";
+import { Loader2, User, Edit, Camera } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MovieCard from "@/components/MovieCard";
 import SeriesCard from "@/components/SeriesCard";
 import EditProfileModal from "@/components/EditProfileModal";
+import EditAvatarModal from "@/components/EditAvatarModal.jsx";
 
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -13,7 +14,7 @@ export default function ProfilePage() {
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editOpen, setEditOpen] = useState(false);
-
+    const [editAvatarOpen, setEditAvatarOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -31,7 +32,16 @@ export default function ProfilePage() {
             return;
         }
 
-        setUserData(user);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+
+        if (profile) {
+            setUserData(profile);
+        }
 
         const { data: favs } = await supabase
             .from("user_favorites")
@@ -79,14 +89,32 @@ export default function ProfilePage() {
                 <div className="relative container mx-auto px-4 h-full flex items-end pb-10">
                     <div className="flex items-center gap-6">
                         {/* Avatar */}
-                        <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                            <User className="w-12 h-12 text-white/80" />
+                        <div className="relative group">
+                            <div className="w-24 h-24 rounded-full bg-black/40 backdrop-blur-md border-2 border-white/20 flex items-center justify-center overflow-hidden shadow-xl">
+                                {userData?.avatar_url ? (
+                                    <img
+                                        src={userData.avatar_url}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <User className="w-12 h-12 text-white/80" />
+                                )}
+                            </div>
+
+                            {/* Change Avatar Button (Overlay) */}
+                            <button
+                                onClick={() => setEditAvatarOpen(true)}
+                                className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full border border-black shadow-lg transition-transform hover:scale-110"
+                            >
+                                <Camera size={16} />
+                            </button>
                         </div>
 
                         {/* User Info */}
                         <div>
                             <h1 className="text-4xl font-bold text-white">
-                                {userData?.user_metadata?.name || "Your Profile"}
+                                {userData?.username || "Your Profile"}
                             </h1>
                             <p className="text-gray-300 text-lg">
                                 {userData?.email}
@@ -146,6 +174,13 @@ export default function ProfilePage() {
                 open={editOpen}
                 onClose={() => setEditOpen(false)}
                 user={userData}
+            />
+
+            <EditAvatarModal
+                open={editAvatarOpen}
+                onClose={() => setEditAvatarOpen(false)}
+                user={userData}
+                onUpdate={loadProfile}
             />
         </div>
     );
