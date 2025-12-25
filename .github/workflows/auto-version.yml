@@ -22,27 +22,21 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // 1. --- ΑΝΑΛΥΣΗ ΜΗΝΥΜΑΤΟΣ ---
-            const fullMessage = context.payload.head_commit.message; // π.χ. "minor: Create sss"
-            const lowerMessage = fullMessage.toLowerCase();
-            console.log(`Commit: "${fullMessage}"`);
+            const fullMessage = context.payload.head_commit.message;
+            const lines = fullMessage.split('\n');
+            const firstLine = lines[0].trim();
+            const lowerFirstLine = firstLine.toLowerCase();
 
             let bumpType = null;
-            if (lowerMessage.includes('major:')) bumpType = 'major';
-            else if (lowerMessage.includes('minor:')) bumpType = 'minor';
-            else if (lowerMessage.includes('patch:')) bumpType = 'patch';
+            if (lowerFirstLine.includes('major:')) bumpType = 'major';
+            else if (lowerFirstLine.includes('minor:')) bumpType = 'minor';
+            else if (lowerFirstLine.includes('patch:')) bumpType = 'patch';
 
-            if (!bumpType) {
-              console.log('Skipping: No keyword found.');
-              return;
-            }
+            if (!bumpType) return;
 
-            // 2. --- ΚΑΘΑΡΙΣΜΟΣ ΚΕΙΜΕΝΟΥ (Fix για το "minor: sss") ---
-            // Αφαιρούμε το πρόθεμα (minor: κλπ) για να έχουμε καθαρό τίτλο
-            let cleanTitle = fullMessage.replace(/^(major|minor|patch):\s*/i, '').trim();
+            let cleanTitle = firstLine.replace(/^(major|minor|patch):\s*/i, '').trim();
             cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
             
-            // 3. --- ΒΡΙΣΚΟΥΜΕ ΤΑ TAGS ---
             let lastTag = 'v0.0.0';
             try {
               let output = '';
@@ -50,9 +44,8 @@ jobs:
                 listeners: { stdout: (data) => { output += data.toString(); } }
               });
               lastTag = output.trim();
-            } catch (e) { console.log("No tags found."); }
+            } catch (e) {}
 
-            // 4. --- ΥΠΟΛΟΓΙΣΜΟΣ ΝΕΟΥ VERSION ---
             let parts = lastTag.replace('v', '').split('.').map(num => parseInt(num, 10));
             if (parts.length < 3 || parts.some(isNaN)) parts = [0, 0, 0];
             let [major, minor, patch] = parts;
@@ -62,9 +55,7 @@ jobs:
             else if (bumpType === 'patch') { patch++; }
 
             const newVersion = `v${major}.${minor}.${patch}`;
-            console.log(`New Version: ${newVersion}`);
 
-            // 5. --- ΔΗΜΙΟΥΡΓΙΑ ΤΟΥ ΝΕΟΥ TAG ---
             try {
               await github.rest.git.createRef({
                 owner: context.repo.owner,
@@ -74,50 +65,24 @@ jobs:
               });
             } catch (e) { return; }
 
-            // 6. --- ΔΗΜΙΟΥΡΓΙΑ RELEASE (ΜΟΝΟ ΓΙΑ MAJOR/MINOR) ---
             if (bumpType === 'major' || bumpType === 'minor') {
-              
-              // Βρίσκουμε το προηγούμενο .0 tag (BASE TAG)
-              let baseTag = '';
-              try {
-                let baseOutput = '';
-                await exec.exec('git', ['describe', '--tags', '--abbrev=0', '--match', 'v*.*.0'], {
-                    listeners: { stdout: (data) => { baseOutput += data.toString(); } },
-                    ignoreReturnCode: true 
-                });
-                baseTag = baseOutput.trim();
-              } catch (e) {}
-              
-              if (!baseTag) baseTag = lastTag; // Fallback
-              
-              
               let autoNotes = "";
               try {
                 const response = await github.rest.repos.generateReleaseNotes({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   tag_name: newVersion,
-                  previous_tag_name: baseTag 
+                  previous_tag_name: lastTag 
                 });
                 autoNotes = response.data.body;
-              } catch (e) { console.log("Auto notes failed"); }
-
-             
-              autoNotes = autoNotes.replace(/minor:\s/gi, ""); 
-
-              // --- ΧΤΙΣΙΜΟ ΤΟΥ ΤΕΛΙΚΟΥ ΚΕΙΜΕΝΟΥ ---
-              // Πρώτη γραμμή: Ο καθαρός τίτλος (χωρίς minor:)
-              let finalBody = `## 🚀 ${cleanTitle}\n\n`;
-              
-              // Ενσωματώνουμε τα generated notes 
-              finalBody += autoNotes;
+              } catch (e) {}
 
               await github.rest.repos.createRelease({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 tag_name: newVersion,
                 name: `${newVersion} - ${cleanTitle}`,
-                body: finalBody,
+                body: `## 🚀 ${cleanTitle}\n\n` + autoNotes,
                 generate_release_notes: false 
               });
             }
