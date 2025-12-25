@@ -1,17 +1,20 @@
 # Repository Statistics
-Last updated: Thu Dec 25 12:47:27 UTC 2025
+Last updated: Thu Dec 25 13:06:36 UTC 2025
 
-## 📊 Lines Added per Contributor
-| Author | Manual (+) | Auto/Pkg (+) | Total Added |
-| :--- | :--- | :--- | :--- |
-| Kourougenis | 2021 | 890 | 2911 |
-| Lefteris Lemontzoglou | 2728 | 6293 | 9021 |
-| Leo | 627 | 19 | 646 |
-| Panos Kagoudis | 1143 | 980 | 2123 |
-| PanosMasman | 2814 | 40 | 2854 |
-| Rafail chatzis | 452 | 0 | 452 |
-| Stathis69 | 1663 | 303 | 1966 |
-| fitsiosth | 693 | 2 | 695 |
-| liakou0 | 1006 | 11 | 1017 |
-| rafailc | 1213 | 0 | 1213 |
-| Βασίλης | 884 | 137 | 1021 |
+### 📈 Total Manual Lines currently in Project: **13240**
+> Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
+
+## 📊 Contributor Impact
+| Author | Manual (+) | Manual (-) | Net Manual | Auto/Pkg |
+| :--- | :--- | :--- | :--- | :--- |
+| Kourougenis | 2021 | 115 | 1906 | 890 |
+| Lefteris Lemontzoglou | 2728 | 145 | 2583 | 6293 |
+| Leo | 627 | 143 | 484 | 19 |
+| Panos Kagoudis | 1143 | 228 | 915 | 980 |
+| PanosMasman | 2814 | 141 | 2673 | 40 |
+| Rafail chatzis | 488 | 689 | -201 | 0 |
+| Stathis69 | 1663 | 98 | 1565 | 303 |
+| fitsiosth | 693 | 28 | 665 | 2 |
+| liakou0 | 1006 | 35 | 971 | 11 |
+| rafailc | 1213 | 20 | 1193 | 0 |
+| Βασίλης | 884 | 398 | 486 | 137 |
