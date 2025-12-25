@@ -1,0 +1,54 @@
+name: Repository Stats Bot
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate STATS.md
+        run: |
+          # 1. Define patterns
+          AUTO_PATTERNS="node_modules|package-lock.json|yarn.lock|dist|build|vendor|manifest.json|weights"
+
+          # 2. Create a temporary folder to hold the file before moving it to the other branch
+          mkdir -p stats-out
+          
+          echo "# Repository Statistics" > stats-out/STATS.md
+          echo "Last updated: $(date -u)" >> stats-out/STATS.md
+          echo "" >> stats-out/STATS.md
+          
+          echo "## 📊 Lines Added per Contributor" >> stats-out/STATS.md
+          echo "| Author | Manual (+) | Auto/Pkg (+) | Total Added |" >> stats-out/STATS.md
+          echo "| :--- | :--- | :--- | :--- |" >> stats-out/STATS.md
+
+          git log --format='%aN' | sort -u | while read author; do
+            manual_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | grep -vE "$AUTO_PATTERNS" | awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
+            auto_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | grep -E "$AUTO_PATTERNS" | awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
+
+            m_add=${manual_added:-0}; a_add=${auto_added:-0}
+            total=$((m_add + a_add))
+            
+            if [ "$total" != "0" ]; then
+              echo "| $author | $m_add | $a_add | $total |" >> stats-out/STATS.md
+            fi
+          done
+
+      - name: Deploy to Stats Branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: stats-out     # The folder containing our new STATS.md
+          branch: stats         # The branch where the file will live
+          commit-message: "docs: update repository statistics"
