@@ -26,7 +26,22 @@ jobs:
           # 2. Create output folder
           mkdir -p stats-out
           
-          # 3. Calculate Project Total (Current lines in existence: Add - Sub)
+          # 3. IDENTIFY BAD FILES & AUTHOR FIRST
+          BAD_FILES=$(find . \( -path "*/htmlReport/*" -o -name "Test Results - MovieControllerTest.html" \) -type f)
+          TOTAL_BAD_LINES=0
+          REPORT_AUTHOR=""
+
+          if [ -n "$BAD_FILES" ]; then
+            while IFS= read -r file; do
+              lines=$(wc -l < "$file" | xargs)
+              TOTAL_BAD_LINES=$((TOTAL_BAD_LINES + lines))
+            done <<< "$BAD_FILES"
+            
+            FIRST_FILE=$(echo "$BAD_FILES" | head -n 1)
+            REPORT_AUTHOR=$(git log -1 --format='%aN' -- "$FIRST_FILE")
+          fi
+
+          # 4. Calculate Project Total
           TOTAL_PROJECT_LINES=$(git log --numstat --pretty=tformat: --no-merges | \
                                 grep -vE "$AUTO_PATTERNS" | \
                                 awk '{ add += $1; subs += $2 } END { print add - subs }')
@@ -39,32 +54,47 @@ jobs:
           echo "" >> stats-out/STATS.md
           
           echo "## 📊 Contributor Impact" >> stats-out/STATS.md
-          echo "| Author | Manual (+) | Manual (-) | Net Manual | Auto/Pkg |" >> stats-out/STATS.md
+          echo "| Author | Manual (+) | Manual (-) | Styles (.css) | Auto/Pkg |" >> stats-out/STATS.md
           echo "| :--- | :--- | :--- | :--- | :--- |" >> stats-out/STATS.md
 
-          # 4. Calculate stats for each author
+          # 5. Calculate stats for each author
           git log --format='%aN' | sort -u | while read author; do
-            # Calculate Manual stats (Add, Sub, Net)
             manual_stats=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
-                    grep -vE "$AUTO_PATTERNS" | \
-                    awk '{ add += $1; subs += $2 } END { if (add == "") add=0; if (subs == "") subs=0; printf "%s|%s|%s", add, subs, add - subs }')
+                    grep -vE "$AUTO_PATTERNS" | grep -v "\.css" | \
+                    awk '{ add += $1; subs += $2 } END { if (add == "") add=0; if (subs == "") subs=0; printf "%s|%s", add, subs }')
             
-            # Calculate Automatic additions
+            m_add=$(echo "$manual_stats" | cut -d'|' -f1)
+            m_sub=$(echo "$manual_stats" | cut -d'|' -f2)
+
+            # Subtract "bad" lines if this author committed them
+            if [ "$author" == "$REPORT_AUTHOR" ]; then
+              m_add=$((m_add - TOTAL_BAD_LINES))
+              if [ "$m_add" -lt 0 ]; then m_add=0; fi
+            fi
+
+            style_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
+                    grep "\.css" | \
+                    awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
+
             auto_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
                     grep -E "$AUTO_PATTERNS" | \
                     awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
 
-            # Extract variables
-            m_add=$(echo "$manual_stats" | cut -d'|' -f1)
-            m_sub=$(echo "$manual_stats" | cut -d'|' -f2)
-            m_net=$(echo "$manual_stats" | cut -d'|' -f3)
+            s_add=${style_added:-0}
             a_add=${auto_added:-0}
             
-            # Filter out authors with 0 changes
-            if [ "$m_add" != "0" ] || [ "$a_add" != "0" ]; then
-              echo "| $author | $m_add | $m_sub | $m_net | $a_add |" >> stats-out/STATS.md
+            if [ "$m_add" != "0" ] || [ "$s_add" != "0" ] || [ "$a_add" != "0" ]; then
+              echo "| $author | $m_add | $m_sub | $s_add | $a_add |" >> stats-out/STATS.md
             fi
           done
+
+          # 6. --- APPEND THE NOTICE ---
+          if [ -n "$REPORT_AUTHOR" ]; then
+            echo "" >> stats-out/STATS.md
+            echo "---" >> stats-out/STATS.md
+            echo "### ⚠️ Notice" >> stats-out/STATS.md
+            echo "The contributor **@$REPORT_AUTHOR** had mistakenly committed the HTML report files (including the htmlReport directory) and **Test Results - MovieControllerTest.html** with a total of **$TOTAL_BAD_LINES lines** that has nothing to do with the project. These lines have been excluded from their Manual (+) count above. It was to test his code and he forgot to remove it." >> stats-out/STATS.md
+          fi
 
       - name: Deploy to Stats Branch
         uses: JamesIves/github-pages-deploy-action@v4
