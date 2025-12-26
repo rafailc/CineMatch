@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import Likes from "../components/Likes";
+import Comments from "../components/Comments";
 
 const STORIES = [
     { id: 'me', username: 'Your Story', img: '', isUser: true },
@@ -22,6 +23,8 @@ export default function MediaPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
+    const [createMode, setCreateMode] = useState(null);
     const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
     const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false); //Tracks if camera is open
@@ -71,6 +74,7 @@ export default function MediaPage() {
                         media_type,
                         caption,
                         likes_count,
+                        comments_count,
                         created_at,
                         movie_title,
                         tmdb_id,
@@ -90,6 +94,7 @@ export default function MediaPage() {
 
                 const formattedData = postsData.map((post) => ({
                     ...post,
+                    comments_count: post.comments_count ?? 0,
                     username: post.profiles?.username || "Unknown",
                     user_img: post.profiles?.avatar_url || "https://via.placeholder.com/150",
                     liked: post.media_likes?.some((like) => like.user_id === user?.id),
@@ -530,13 +535,16 @@ export default function MediaPage() {
                                         />
 
                                         <button
+                                            onClick={() => setOpenCommentsPostId(post.id)}
                                             className="flex items-center gap-1"
                                         >
                                             <MessageCircle className="w-7 h-7 text-white" />
+                                            <span className="text-sm">{post.comments_count ?? 0}</span>
                                         </button>
 
 
                                     </div>
+
 
                                     <div className="space-y-1">
                                         <div className="text-sm">
@@ -544,11 +552,41 @@ export default function MediaPage() {
                                             <span className="text-gray-300">{post.caption}</span>
                                         </div>
 
+
+
+                                        {(post.comments_count ?? 0) > 0 ? (
+                                            <p
+                                                className="text-sm text-gray-400 cursor-pointer hover:text-gray-300"
+                                                onClick={() => setOpenCommentsPostId(post.id)}
+                                            >
+                                                View all {post.comments_count}{" "}
+                                                {post.comments_count === 1 ? "comment" : "comments"}
+                                            </p>
+                                        ) : (
+                                            <p
+                                                className="text-sm text-gray-500 cursor-pointer hover:text-gray-300"
+                                                onClick={() => setOpenCommentsPostId(post.id)}
+                                            >
+                                                Be the first to comment
+                                            </p>
+                                        )}
+
                                         <p className="text-[10px] text-muted-foreground uppercase tracking-wide pt-1">
                                             {formatTimeAgo(post.created_at)} AGO
                                         </p>
                                     </div>
                                 </div>
+
+                                <Comments
+                                    postId={post.id}
+                                    open={openCommentsPostId === post.id}
+                                    onClose={() => setOpenCommentsPostId(null)}
+                                    onCountChange={(newCount) => {
+                                        setPosts((prev) =>
+                                            prev.map((p) => (p.id === post.id ? { ...p, comments_count: newCount } : p))
+                                        );
+                                    }}
+                                />
                             </article>
                         ))}
                 </section>
