@@ -6,6 +6,7 @@ import {
     Image as ImageIcon, Loader2, RefreshCcw, Check
 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import Likes from "../components/Likes";
 
 const STORIES = [
     { id: 'me', username: 'Your Story', img: '', isUser: true },
@@ -21,8 +22,8 @@ export default function MediaPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+    const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false); //Tracks if camera is open
     const [newCaption, setNewCaption] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
@@ -37,6 +38,10 @@ export default function MediaPage() {
     const [cameraMode, setCameraMode] = useState('photo');
     const [isRecording, setIsRecording] = useState(false);
     const API_BASE = "http://localhost:8080/api/tmdb";
+    const [meId, setMeId] = useState(null);
+    const [menuPostId, setMenuPostId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [lastMovie, setLastMovie] = useState(null);
 
     // Refs
     const fileInputRef = useRef(null);
@@ -57,19 +62,37 @@ export default function MediaPage() {
 
     async function fetchPosts() {
         try {
-            const { data, error } = await supabase
-                .from('media_posts')
-                .select(`*, profiles ( username,avatar_url )`)
-
-                .order('created_at', { ascending: false });
+            const { data: postsData, error } = await supabase
+                .from("media_posts")
+                .select(`
+                        id,
+                        user_id,
+                        media_url,
+                        media_type,
+                        caption,
+                        likes_count,
+                        created_at,
+                        movie_title,
+                        tmdb_id,
+                        tmdb_type,
+                        profiles ( username, avatar_url ),
+                        media_likes ( user_id )
+                      `)
+                .order("created_at", { ascending: false });
 
             if (error) throw error;
-            if (data) {
-                const formattedData = data.map(post => ({
+            if (postsData) {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                setMeId(user?.id || null);
+
+                const formattedData = postsData.map((post) => ({
                     ...post,
-                    username: post.profiles?.username || 'Unknown',
-                    liked: false,
-                    user_img: post.profiles.avatar_url || 'https://via.placeholder.com/150'
+                    username: post.profiles?.username || "Unknown",
+                    user_img: post.profiles?.avatar_url || "https://via.placeholder.com/150",
+                    liked: post.media_likes?.some((like) => like.user_id === user?.id),
                 }));
                 setPosts(formattedData);
             }
@@ -232,15 +255,48 @@ export default function MediaPage() {
         }
     };
 
+    async function handleDeletePost(post) {
+        if (!post) return;
+
+        const ok = window.confirm("Delete this post?");
+        if (!ok) return;
+
+        setIsDeleting(true);
+
+        try {
+            const { error: delError } = await supabase
+                .from("media_posts")
+                .delete()
+                .eq("id", post.id);
+
+            if (delError) throw delError;
+
+            setPosts((prev) => prev.filter((p) => p.id !== post.id));
+            setMenuPostId(null);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
     // --- UPLOAD LOGIC ---
     async function handleCreatePost(e) {
         e.preventDefault();
+
+        if (!movieTitle.trim() || !tmdbId) {
+            alert("Please select a related movie/series from the list.");
+            return;
+        }
+
         if (!selectedFile) {
             alert("Please select a photo or video first.");
             return;
         }
 
         setIsSubmitting(true);
+        // Save last used movie for next time
+        const usedMovie = { title: movieTitle, tmdbId, tmdbType };
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -255,7 +311,7 @@ export default function MediaPage() {
 
             if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage
+            const { data: { urlData } } = supabase.storage
                 .from('media')
                 .getPublicUrl(fileName);
 
@@ -263,7 +319,7 @@ export default function MediaPage() {
                 .from('media_posts')
                 .insert({
                     user_id: user.id,
-                    media_url: publicUrl,
+                    media_url: urlData.publicUrl,
                     caption: newCaption,
                     username: "temp",
                     media_type: selectedFile.type.startsWith('video') ? 'video' : 'image',
@@ -274,10 +330,15 @@ export default function MediaPage() {
 
             if (dbError) throw dbError;
 
+            // Save last used movie for next time
+            setLastMovie(usedMovie);
+            stopCamera();
+            setIsCreatePostOpen(false);
             setIsCreateOpen(false);
             setNewCaption("");
             setSelectedFile(null);
             setPreviewUrl(null);
+            resetMovie();
             fetchPosts();
 
         } catch (error) {
@@ -302,17 +363,12 @@ export default function MediaPage() {
         return `${diffInDays}d`;
     };
 
-    const toggleLike = (postId) => { /* ... existing helper ... */
-        setPosts(posts.map(post => {
-            if (post.id === postId) {
-                return {
-                    ...post,
-                    liked: !post.liked,
-                    likes_count: post.liked ? (post.likes_count || 0) - 1 : (post.likes_count || 0) + 1
-                };
-            }
-            return post;
-        }));
+    const resetMovie = () => {
+        setMovieTitle("");
+        setTmdbId(null);
+        setTmdbType(null);
+        setSuggestions([]);
+        setShowSuggestions(false);
     };
 
     useEffect(() => {
@@ -366,89 +422,152 @@ export default function MediaPage() {
 
                 {/* --- FEED --- */}
                 <section className="flex flex-col gap-6">
-                    {loading && <div className="text-center py-10 text-muted-foreground">Loading posts...</div>}
+                    {loading && (
+                        <div className="text-center py-10 text-muted-foreground">
+                            Loading posts...
+                        </div>
+                    )}
 
-                    {!loading && posts.map((post) => (
-                        <article key={post.id} className="bg-background md:border border-white/10 md:rounded-xl overflow-hidden mb-4">
-                            {/* --- HEADER --- */}
-                            <div className="flex items-center justify-between p-3">
-                                <div className="flex items-center gap-3">
-                                    {/* Avatar */}
-                                    <img
-                                        src={post.user_img}
-                                        alt={post.username}
-                                        className="w-10 h-10 rounded-full object-cover ring-1 ring-white/20"
-                                    />
+                    {!loading &&
+                        posts.map((post) => (
+                            <article
+                                key={post.id}
+                                className="bg-background md:border border-white/10 md:rounded-xl overflow-hidden mb-4"
+                            >
+                                {/* --- HEADER --- */}
+                                <div className="flex items-center justify-between p-3">
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={post.user_img}
+                                            alt={post.username}
+                                            className="w-10 h-10 rounded-full object-cover ring-1 ring-white/20"
+                                        />
+                                        <div className="flex flex-col">
+                      <span className="font-semibold text-sm hover:text-primary transition-colors cursor-pointer leading-tight">
+                        {post.username}
+                      </span>
 
-                                    {/* Text Container  */}
-                                    <div className="flex flex-col">
-                                        {/* 1. Username */}
-                                        <span className="font-semibold text-sm hover:text-primary transition-colors cursor-pointer leading-tight">
-                                            {post.username}
-                                        </span>
-
-                                        {/* Movie Title */}
-                                        {post.movie_title && (
+                                            {post.movie_title && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const type =
+                                                            post.tmdb_type === "series" ? "series" : "movie";
+                                                        navigate(`/${type}/${post.tmdb_id}`);
+                                                    }}
+                                                    className="text-xs text-blue-400 hover:text-blue-300 hover:underline text-left font-medium"
+                                                >
+                                                    {post.movie_title}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        {post.user_id === meId && (
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const type = post.tmdb_type === 'series' ? 'series' : 'movie';
-                                                    navigate(`/${type}/${post.tmdb_id}`);
-                                                }}
-                                                className="text-xs text-blue-400 hover:text-blue-300 hover:underline text-left font-medium"
+                                                onClick={() => setMenuPostId((id) => (id === post.id ? null : post.id))}
+                                                className="p-1 rounded-full hover:bg-white/10"
                                             >
-                                                {post.movie_title}
+                                                <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
                                             </button>
                                         )}
 
+                                        {menuPostId === post.id && (
+                                            <>
+                                                {/* click outside backdrop */}
+                                                <button
+                                                    onClick={() => setMenuPostId(null)}
+                                                    className="fixed inset-0 z-40 cursor-default"
+                                                />
+
+                                                {/* dropdown */}
+                                                <div className="absolute right-0 top-8 z-50 w-40 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-hidden">
+                                                    <button
+                                                        disabled={isDeleting}
+                                                        onClick={() => handleDeletePost(post)}
+                                                        className="w-full text-left px-4 py-3 text-sm hover:bg-white/10 text-red-400 disabled:opacity-50"
+                                                    >
+                                                        {isDeleting ? "Deleting..." : "Delete"}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
+
                                 </div>
-                                <MoreHorizontal className="w-5 h-5 text-muted-foreground cursor-pointer" />
-                            </div>
 
-                            <div className="relative w-full bg-muted/20">
-                                {post.media_type === 'video' ? (
-                                    <video src={post.media_url} controls className="w-full h-auto object-cover" />
-                                ) : (
-                                    <img src={post.media_url} alt="Post content" className="w-full h-auto object-cover" />
-                                )}
-                            </div>
+                                <div className="relative w-full bg-muted/20">
+                                    {post.media_type === "video" ? (
+                                        <video
+                                            src={post.media_url}
+                                            controls
+                                            className="w-full h-auto object-cover"
+                                        />
+                                    ) : (
+                                        <img
+                                            src={post.media_url}
+                                            alt="Post content"
+                                            className="w-full h-auto object-cover"
+                                        />
+                                    )}
+                                </div>
 
-                            <div className="p-3">
-                                <div className="flex justify-between items-center mb-3">
-                                    <div className="flex gap-4">
-                                        <button onClick={() => toggleLike(post.id)}>
-                                            <Heart className={`w-7 h-7 transition-colors ${post.liked ? 'fill-red-500 text-red-500' : 'text-foreground hover:text-muted-foreground'}`} />
+                                <div className="p-3">
+                                    <div className="flex gap-4 items-center">
+                                        <Likes
+                                            postId={post.id}
+                                            initialLiked={post.liked}
+                                            initialCount={post.likes_count}
+                                            onChange={(newCount, liked) => {
+                                                setPosts((prev) =>
+                                                    prev.map((p) =>
+                                                        p.id === post.id
+                                                            ? { ...p, likes_count: newCount, liked }
+                                                            : p
+                                                    )
+                                                );
+                                            }}
+                                        />
+
+                                        <button
+                                            className="flex items-center gap-1"
+                                        >
+                                            <MessageCircle className="w-7 h-7 text-white" />
                                         </button>
-                                        <MessageCircle className="w-7 h-7 cursor-pointer hover:text-muted-foreground" />
+
 
                                     </div>
 
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-bold text-sm">{(post.likes_count || 0).toLocaleString()} likes</p>
-                                    <div className="text-sm">
-                                        <span className="font-semibold mr-2">{post.username}</span>
-                                        <span className="text-gray-300">{post.caption}</span>
+                                    <div className="space-y-1">
+                                        <div className="text-sm">
+                                            <span className="font-semibold mr-2">{post.username}</span>
+                                            <span className="text-gray-300">{post.caption}</span>
+                                        </div>
+
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide pt-1">
+                                            {formatTimeAgo(post.created_at)} AGO
+                                        </p>
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide pt-1">{formatTimeAgo(post.created_at)} AGO</p>
                                 </div>
-                            </div>
-                        </article>
-                    ))}
+                            </article>
+                        ))}
                 </section>
             </main>
 
             {/* --- FAB --- */}
             <button
-                onClick={() => setIsCreateOpen(true)}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-500 transition-all z-40 hover:scale-110 active:scale-95"
+                onClick={() => {
+                    setCreateMode("post");
+                    resetMovie();
+                    setIsCreatePostOpen(true);
+                }}
+                className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-500 transition-all z-40"
             >
                 <Plus className="w-8 h-8" />
             </button>
 
             {/* --- MODAL --- */}
-            {isCreateOpen && (
+            {isCreatePostOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
 
@@ -457,7 +576,8 @@ export default function MediaPage() {
                             <button
                                 onClick={() => {
                                     stopCamera();
-                                    setIsCreateOpen(false);
+                                    resetMovie();
+                                    setIsCreatePostOpen(false);
                                     setPreviewUrl(null);
                                     setSelectedFile(null);
                                 }}
@@ -588,7 +708,23 @@ export default function MediaPage() {
 
                                         {/* Autocomplete Movie Input */}
                                         <div className="space-y-1 relative">
-                                            <label className="text-xs font-medium text-gray-400">Watching (Optional)</label>
+                                            <label className="text-xs font-medium text-gray-400">Related movie:  <span className="text-red-500">*</span></label>
+                                            {lastMovie && !tmdbId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setMovieTitle(lastMovie.title);
+                                                        setTmdbId(lastMovie.tmdbId);
+                                                        setTmdbType(lastMovie.tmdbType);
+                                                        setShowSuggestions(false);
+                                                        setSuggestions([]);
+                                                    }}
+                                                    className="text-xs text-blue-400 hover:text-blue-300 underline text-left"
+                                                >
+                                                    Use previous: {lastMovie.title}
+                                                </button>
+                                            )}
+
                                             <div className="relative">
                                                 <input
                                                     type="text"
@@ -613,7 +749,7 @@ export default function MediaPage() {
                                                                     setMovieTitle(movie.title || movie.name);
                                                                     setSuggestions([]);
                                                                     setShowSuggestions(false);
-                                                                    setTmdbId(movie.id); //save tmdb id for later
+                                                                    setTmdbId(movie.id);
                                                                     setTmdbType(movie.title ? 'movie' : 'series');
                                                                 }}
                                                                 className="flex items-center gap-3 p-2 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"
@@ -660,7 +796,7 @@ export default function MediaPage() {
 
                                     <button
                                         onClick={handleCreatePost}
-                                        disabled={isSubmitting || !selectedFile}
+                                        disabled={isSubmitting || !selectedFile || !tmdbId}
                                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         {isSubmitting ? (
