@@ -66,13 +66,28 @@ jobs:
             } catch (e) { return; }
 
             if (bumpType === 'major' || bumpType === 'minor') {
+              // 1. --- ΕΥΡΕΣΗ ΤΟΥ BASE TAG (v*.*.0) ---
+              let baseTag = '';
+              try {
+                let baseOutput = '';
+                // Αναζητούμε το πιο πρόσφατο tag που τελειώνει σε .0
+                await exec.exec('git', ['describe', '--tags', '--abbrev=0', '--match', 'v*.*.0'], {
+                    listeners: { stdout: (data) => { baseOutput += data.toString(); } },
+                    ignoreReturnCode: true 
+                });
+                baseTag = baseOutput.trim();
+              } catch (e) {}
+              
+              // Αν δεν βρει .0 tag, χρησιμοποιεί το αμέσως προηγούμενο
+              if (!baseTag) baseTag = lastTag; 
+
               let autoNotes = "";
               try {
                 const response = await github.rest.repos.generateReleaseNotes({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   tag_name: newVersion,
-                  previous_tag_name: lastTag 
+                  previous_tag_name: baseTag // Εδώ γίνεται η σύγκριση με το .0 tag
                 });
                 autoNotes = response.data.body;
               } catch (e) {}
