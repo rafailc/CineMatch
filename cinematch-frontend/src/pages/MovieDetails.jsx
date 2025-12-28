@@ -4,22 +4,36 @@ import { getMovieDetails, calculateEngagementScore } from "../lib/tmdbBackend";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
 import { PersonCard } from "../components/PersonCard";
-import { Loader2, Star, TrendingUp, DollarSign, Clock, Calendar } from "lucide-react";
+import { Loader2, Star, TrendingUp, DollarSign, Clock, Calendar,MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import {supabase} from "@/lib/supabase.js";
 import FavoriteToggle from "../components/FavoriteToggle";
+import {Button} from "@/components/ui/button.jsx";
+import ReviewModal from "../components/ReviewModal";
 
 export default function MovieDetailsPage() {
     const { id } = useParams();
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
     useEffect(() => {
         if (id) {
             loadMovieDetails(parseInt(id));
         }
     }, [id]);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                setCurrentUserId(session.user.id);
+            }
+        };
+        fetchUser();
+    }, []);
 
     async function loadMovieDetails(movieId) {
         try {
@@ -117,6 +131,16 @@ export default function MovieDetailsPage() {
                                 {movie.title}
                             </h1>
 
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="gap-2 bg-card text-card-foreground border-border hover:bg-gradient-to-br hover:from-red-700 hover:to-blue-600 hover:text-white transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    Reviews
+                                </Button>
+
                             <FavoriteToggle
                                 item={{
                                     id: movie.id,
@@ -125,6 +149,7 @@ export default function MovieDetailsPage() {
                                     media_type: "movie"
                                 }}
                             />
+                        </div>
                         </div>
 
                         {/* GENRES */}
@@ -214,6 +239,14 @@ export default function MovieDetailsPage() {
                 </section>
 
             </div>
+
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                movieId={movie.id}
+                userId={currentUserId}
+            />
+
         </div>
     );
 }
