@@ -12,17 +12,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TvDetailsDto {
-    public int id;
+    public Long id;
     public String name;
     public String original_name;
     public String overview;
     public String first_air_date;
     public String last_air_date;
-    public int number_of_episodes;
-    public int number_of_seasons;
-    public double vote_average;
-    public int vote_count;
-    public double popularity;
+    public Long number_of_episodes;
+    public Long number_of_seasons;
+    public Double vote_average;
+    public Double vote_count;
+    public Double popularity;
     public String status;
     public String type;
     public String homepage;
