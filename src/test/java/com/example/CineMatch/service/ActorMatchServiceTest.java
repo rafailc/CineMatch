@@ -27,7 +27,7 @@ public class ActorMatchServiceTest {
     // 🚨 ΔΙΟΡΘΩΣΗ: Κάνουμε SPY στον Service για να μπορούμε να Mock τις public μεθόδους του
     @InjectMocks
     @Spy
-    private ActorMatchService actorMatchService;
+    private ActorMatchServiceImpl actorMatchService;
 
     @Mock
     private RestTemplate restTemplate;

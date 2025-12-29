@@ -32,8 +32,7 @@ public class MovieDetailsDto {
     private Double voteAverage;
 
     @JsonProperty("release_date")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate releaseDate;
+    private String releaseDate;
 
     private List<GenreDto> genres;
     private List<ProductionCompanyDto> productionCompanies;

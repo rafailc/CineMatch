@@ -1,13 +1,13 @@
 package com.example.CineMatch.service;
 
 import com.example.CineMatch.Repository.TmdbRepository;
-import com.example.CineMatch.dto.MovieDetailsDto;
-import com.example.CineMatch.dto.MovieDto;
-import com.example.CineMatch.dto.ResponseDto;
+import com.example.CineMatch.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -26,35 +26,49 @@ public class MovieServiceImpl implements MovieService {
     @Override
     public ResponseDto<MovieDto> getTrending(int page) {
         String json = tmdbRepository.call("/trending/movie/week?page=" + page);
-        ResponseDto<MovieDto> response = objectMapper.readValue(json, ResponseDto.class);
-        return response;
+        JavaType type = objectMapper.getTypeFactory()
+                .constructParametricType(ResponseDto.class, MovieDto.class);
+
+        return objectMapper.readValue(json, type);
     }
 
     // SEARCH
     @Override
     public ResponseDto<MovieDto> getSearch(String q, int page) {
         String json = tmdbRepository.call("/search/movie?query=" + q + "&page=" + page);
-        ResponseDto<MovieDto> response = objectMapper.readValue(json, ResponseDto.class);
-        return response;
+        JavaType type = objectMapper.getTypeFactory()
+                .constructParametricType(ResponseDto.class, MovieDto.class);
+
+        return objectMapper.readValue(json, type);
     }
 
     // DISCOVER
     @Override
     public ResponseDto<MovieDto> getDiscover(String q) {
-        Map<String,Object> map = tmdbRepository.callMap("/discover/movie" + q);
-        String json = objectMapper.writeValueAsString(map);
-        ResponseDto<MovieDto> response = objectMapper.readValue(json, ResponseDto.class);
-        return response;
+        String json = tmdbRepository.call("/discover/movie" + q);
+        JavaType type = objectMapper.getTypeFactory()
+                .constructParametricType(ResponseDto.class, MovieDto.class);
+
+        return objectMapper.readValue(json, type);
     }
 
     // DETAILS
     @Override
     public MovieDetailsDto getDetails(long id) {
-        Map<String, Object> details = tmdbRepository.callMap("/movie/" + id);
-        Map<String, Object> credits = tmdbRepository.callMap("/movie/" + id + "/credits");
+        Map<String, Object> details =
+                new HashMap<>(tmdbRepository.callMap("/movie/" + id));
+        Map<String, Object> credits =
+                tmdbRepository.callMap("/movie/" + id + "/credits");
+
         details.put("cast", credits.get("cast"));
+
         String json = objectMapper.writeValueAsString(details);
         MovieDetailsDto dto = objectMapper.readValue(json, MovieDetailsDto.class);
+
+        if (dto.getId() == null || dto.getTitle() == null) {
+            throw new RuntimeException("Invalid movie details received from TMDB");
+        }
+
         return dto;
     }
 }

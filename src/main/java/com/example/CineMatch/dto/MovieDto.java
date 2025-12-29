@@ -28,6 +28,5 @@ public class MovieDto {
     private Double voteAverage;
 
     @JsonProperty("release_date")
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate releaseDate;
+    private String releaseDate;
 }
