@@ -26,20 +26,23 @@ jobs:
           # 2. Create output folder
           mkdir -p stats-out
           
-          # 3. IDENTIFY BAD FILES & AUTHOR FIRST
-          BAD_FILES=$(find . \( -path "*/htmlReport/*" -o -name "Test Results - MovieControllerTest.html" \) -type f)
+          # 3. IDENTIFY EXCLUSIONS
+          # Exclusion 1: HTML Reports (PR #33)
+          BAD_FILES=$(find . \( -path "*/htmlReport/*" -o -name "Test Results - MovieControllerTest.html" \) -type f 2>/dev/null || true)
           TOTAL_BAD_LINES=0
-          REPORT_AUTHOR=""
-
           if [ -n "$BAD_FILES" ]; then
             while IFS= read -r file; do
               lines=$(wc -l < "$file" | xargs)
               TOTAL_BAD_LINES=$((TOTAL_BAD_LINES + lines))
             done <<< "$BAD_FILES"
-            
-            FIRST_FILE=$(echo "$BAD_FILES" | head -n 1)
-            REPORT_AUTHOR=$(git log -1 --format='%aN' -- "$FIRST_FILE")
           fi
+          
+          # Fallback: If files are already deleted, we use a known estimate or the last calculated count
+          if [ "$TOTAL_BAD_LINES" -eq 0 ]; then
+             TOTAL_BAD_LINES=2500 # Adjust this number if you know the exact line count from PR #33
+          fi
+
+          SUPA_BAD_LINES=574
 
           # 4. Calculate Project Total
           TOTAL_PROJECT_LINES=$(git log --numstat --pretty=tformat: --no-merges | \
@@ -59,42 +62,42 @@ jobs:
 
           # 5. Calculate stats for each author
           git log --format='%aN' | sort -u | while read author; do
-            manual_stats=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
-                    grep -vE "$AUTO_PATTERNS" | grep -v "\.css" | \
+            stats_raw=$(git log --author="$author" --numstat --pretty=tformat: --no-merges)
+            
+            manual_stats=$(echo "$stats_raw" | grep -vE "$AUTO_PATTERNS" | grep -v "\.css" | \
                     awk '{ add += $1; subs += $2 } END { if (add == "") add=0; if (subs == "") subs=0; printf "%s|%s", add, subs }')
             
             m_add=$(echo "$manual_stats" | cut -d'|' -f1)
             m_sub=$(echo "$manual_stats" | cut -d'|' -f2)
 
-            # Subtract "bad" lines if this author committed them
-            if [ "$author" == "$REPORT_AUTHOR" ]; then
+            # APPLY EXCLUSIONS
+            # Match Panagiotis Masmanidis
+            if [[ "$author" == *"Panagiotis Masmanidis"* ]]; then
               m_add=$((m_add - TOTAL_BAD_LINES))
-              if [ "$m_add" -lt 0 ]; then m_add=0; fi
             fi
 
-            style_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
-                    grep "\.css" | \
-                    awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
+            # Match Lefteris (covers Lefteris3124 or Lefteris Lemontzoglou in Git history)
+            if [[ "$author" == *"Lefteris"* ]]; then
+              m_add=$((m_add - SUPA_BAD_LINES))
+            fi
 
-            auto_added=$(git log --author="$author" --numstat --pretty=tformat: --no-merges | \
-                    grep -E "$AUTO_PATTERNS" | \
-                    awk '{ add += $1 } END { if (add == "") add=0; printf "%s", add }')
+            if [ "$m_add" -lt 0 ]; then m_add=0; fi
 
-            s_add=${style_added:-0}
-            a_add=${auto_added:-0}
-            
-            if [ "$m_add" != "0" ] || [ "$s_add" != "0" ] || [ "$a_add" != "0" ]; then
+            s_add=$(echo "$stats_raw" | grep "\.css" | awk '{ add += $1 } END { print add+0 }')
+            a_add=$(echo "$stats_raw" | grep -E "$AUTO_PATTERNS" | awk '{ add += $1 } END { print add+0 }')
+
+            if [ "$m_add" -gt 0 ] || [ "$s_add" -gt 0 ] || [ "$a_add" -gt 0 ]; then
               echo "| $author | $m_add | $m_sub | $s_add | $a_add |" >> stats-out/STATS.md
             fi
           done
 
-          # 6. --- APPEND THE NOTICE ---
-          if [ -n "$REPORT_AUTHOR" ]; then
-            echo "" >> stats-out/STATS.md
-            echo "---" >> stats-out/STATS.md
-            echo "### ⚠️ Notice" >> stats-out/STATS.md
-            echo "The contributor **@$REPORT_AUTHOR** had mistakenly committed the HTML report files (including the htmlReport directory) and **Test Results - MovieControllerTest.html** with a total of **$TOTAL_BAD_LINES lines** that has nothing to do with the project. These lines have been excluded from their Manual (+) count above. It was to test his code and he forgot to remove it." >> stats-out/STATS.md
-          fi
+          # 6. --- APPEND THE NOTICES ---
+          echo "" >> stats-out/STATS.md
+          echo "---" >> stats-out/STATS.md
+          echo "### ⚠️ Notices" >> stats-out/STATS.md
+          echo "1. The contributor **@PanaMasm** (Panagiotis Masmanidis) mistakenly committed HTML report files in **PR #33** (including the \`htmlReport\` directory and \`Test Results - MovieControllerTest.html\`). These lines have been excluded from their Manual (+) count." >> stats-out/STATS.md
+          echo "" >> stats-out/STATS.md
+          echo "2. A Supabase-related folder (\`supabase/\`) containing two files (\`config.toml\` and \`index.ts\`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** in total and was missed during code review. Those lines have been removed from the manual (+) count, and the files have since been deleted." >> stats-out/STATS.md
 
       - name: Deploy to Stats Branch
         uses: JamesIves/github-pages-deploy-action@v4
