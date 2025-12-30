@@ -243,8 +243,8 @@ export default function MovieDetailsPage() {
             <ReviewModal
                 isOpen={isReviewModalOpen}
                 onClose={() => setIsReviewModalOpen(false)}
-                movieId={movie.id}
-                userId={currentUserId}
+                contentId={movie.id}
+                contentType="movie"
             />
 
         </div>
