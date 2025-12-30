@@ -1,7 +1,7 @@
 # Repository Statistics
-Last updated: Tue Dec 30 21:09:40 UTC 2025
+Last updated: Tue Dec 30 21:20:42 UTC 2025
 
-### 📈 Total Manual Lines currently in Project: **15367**
+### 📈 Total Manual Lines currently in Project: **15364**
 > Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
 
 ## 📊 Contributor Impact
@@ -11,8 +11,8 @@ Last updated: Tue Dec 30 21:09:40 UTC 2025
 | Lefteris Lemontzoglou | 1965 | 145 | 189 | 6293 |
 | Leo | 1566 | 338 | 0 | 19 |
 | Panos Kagoudis | 1143 | 228 | 0 | 980 |
-| PanosMasman | 2959 | 141 | 0 | 40 |
-| Rafail chatzis | 580 | 733 | 0 | 0 |
+| PanosMasman | 1530 | 141 | 0 | 40 |
+| Rafail chatzis | 585 | 741 | 0 | 0 |
 | Stathis69 | 1648 | 98 | 15 | 303 |
 | fitsiosth | 1288 | 29 | 0 | 2 |
 | liakou0 | 1030 | 146 | 296 | 11 |
@@ -21,6 +21,4 @@ Last updated: Tue Dec 30 21:09:40 UTC 2025
 
 ---
 ### ⚠️ Notices
-1. The contributor **@PanaMasm** (Panagiotis Masmanidis) mistakenly committed HTML report files in **PR #33** (including the `htmlReport` directory and `Test Results - MovieControllerTest.html`). These lines have been excluded from their Manual (+) count.
-
-2. A Supabase-related folder (`supabase/`) containing two files (`config.toml` and `index.ts`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** in total and was missed during code review. Those lines have been removed from the manual (+) count, and the files have since been deleted.
+1. A Supabase-related folder (`supabase/`) containing two files (`config.toml` and `index.ts`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** in total and was missed during code review. Those lines have been removed from the manual (+) count, and the files have since been deleted.
