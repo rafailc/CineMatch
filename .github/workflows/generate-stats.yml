@@ -37,6 +37,7 @@ jobs:
             done <<< "$BAD_FILES"
           fi
           
+          # Fallback if files were deleted
           if [ "$TOTAL_BAD_LINES" -eq 0 ]; then
              TOTAL_BAD_LINES=2500 
           fi
@@ -70,12 +71,10 @@ jobs:
             m_sub=$(echo "$manual_stats" | cut -d'|' -f2)
 
             # APPLY EXCLUSIONS
-            # Match PanosMasman
             if [[ "$author" == *"PanosMasman"* ]]; then
               m_add=$((m_add - TOTAL_BAD_LINES))
             fi
 
-            # Match Lefteris
             if [[ "$author" == *"Lefteris"* ]]; then
               m_add=$((m_add - SUPA_BAD_LINES))
             fi
@@ -94,7 +93,7 @@ jobs:
           echo "" >> stats-out/STATS.md
           echo "---" >> stats-out/STATS.md
           echo "### ⚠️ Notices" >> stats-out/STATS.md
-          echo "1. The contributor **@PanosMasman** (Panagiotis Masmanidis) mistakenly committed HTML report files in **PR #33** (including the \`htmlReport\` directory and \`Test Results - MovieControllerTest.html\`). These lines have been excluded from their Manual (+) count." >> stats-out/STATS.md
+          echo "1. The contributor **@PanosMasman** (Panagiotis Masmanidis) had mistakenly committed the HTML report files (including the \`htmlReport\` directory) and **Test Results - MovieControllerTest.html** with a total of **$TOTAL_BAD_LINES lines** that has nothing to do with the project. These lines have been excluded from their Manual (+) count above. It was to test his code and he forgot to remove it." >> stats-out/STATS.md
           echo "" >> stats-out/STATS.md
           echo "2. A Supabase-related folder (\`supabase/\`) containing two files (\`config.toml\` and \`index.ts\`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** in total and was missed during code review. Those lines have been removed from the manual (+) count, and the files have since been deleted." >> stats-out/STATS.md
 
