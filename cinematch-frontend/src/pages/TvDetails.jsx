@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare } from "lucide-react";
 import { getTvDetails } from "../lib/tmdbBackend";
 import { PersonCard } from "../components/PersonCard";
 import FavoriteToggle from "../components/FavoriteToggle";
+import ReviewModal from "../components/ReviewModal";
+import {supabase} from "@/lib/supabase.js";
+import {Button} from "@/components/ui/button.jsx"
 
 export default function TvDetailPage() {
     const { id } = useParams();
@@ -11,10 +14,22 @@ export default function TvDetailPage() {
 
     const [series, setSeries] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
     useEffect(() => {
         loadSeries();
     }, [id]);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                setCurrentUserId(session.user.id);
+            }
+        };
+        fetchUser();
+    }, []);
 
     async function loadSeries() {
         try {
@@ -91,6 +106,16 @@ export default function TvDetailPage() {
                         <div className="flex items-center justify-between mb-4">
                             <h1 className="text-5xl font-bold">{series.name}</h1>
 
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="gap-2 bg-card text-card-foreground border-border hover:bg-gradient-to-br hover:from-red-700 hover:to-blue-600 hover:text-white transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    Reviews
+                                </Button>
+
                             <FavoriteToggle
                                 item={{
                                     id: series.id,
@@ -99,6 +124,7 @@ export default function TvDetailPage() {
                                     media_type: "tv"
                                 }}
                             />
+                            </div>
                         </div>
 
                         {/* Rating + Year */}
@@ -161,6 +187,12 @@ export default function TvDetailPage() {
                     </div>
                 </div>
             </div>
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                contentId={series.id}
+                contentType="series"
+            />
         </div>
     );
 }

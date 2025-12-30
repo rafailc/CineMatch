@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, PlusCircle, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase'; // Verify this path matches your project
+import { supabase } from '@/lib/supabase';
 import { pipeline, env } from '@xenova/transformers';
 
 // Configure Transformers.js to use remote models
 env.allowLocalModels = false;
 env.allowRemoteModels = true;
 
-const ReviewModal = ({ isOpen, onClose, movieId }) => {
+const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
     const [view, setView] = useState('list');
     const [reviews, setReviews] = useState([]);
     const [reviewText, setReviewText] = useState("");
@@ -48,14 +48,15 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
             setView('list');
             fetchReviews();
         }
-    }, [isOpen, movieId]);
+    }, [isOpen, contentId, contentType]);
 
     const fetchReviews = async () => {
         setLoading(true);
         const { data: reviewsData, error: reviewsError } = await supabase
             .from('reviews')
             .select('*')
-            .eq('movie_id', movieId)
+            .eq('content_id', contentId)
+            .eq('content_type', contentType)
             .order('created_at', { ascending: false });
 
         if (reviewsError) {
@@ -81,7 +82,6 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
     };
 
     const handlePublish = async () => {
-        // Double check to prevent forced enabling
         if (!reviewText.trim() || !sentiment) return;
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -91,8 +91,6 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
             return;
         }
 
-        // Logic to safely handle English vs Non-English sentiment
-        // If label is 'skipped' (non-English), normalizedSentiment becomes null (neutral)
         let normalizedSentiment = null;
         if (sentiment?.label && sentiment.label !== 'skipped') {
             normalizedSentiment = sentiment.label.toLowerCase().includes('positive') ? 'positive' : 'negative';
@@ -104,7 +102,8 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
                 content: reviewText,
                 sentiment: normalizedSentiment,
                 sentiment_score: sentiment?.score || null,
-                movie_id: movieId,
+                content_id: contentId,
+                content_type: contentType,
                 user_id: user.id
             }]);
 
@@ -123,10 +122,9 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
         const hasNonLatin = /[^\u0000-\u024F\u1E00-\u1EFF]/.test(text);
         if (hasNonLatin) return 'non-english';
 
-        // Slightly relaxed check for shorter texts
         if (text.length < 10) return 'english';
 
-        const commonEnglishWords = /\b(the|is|are|was|were|have|has|had|do|does|did|will|would|can|could|should|this|that|these|those|and|but|or|not|very|good|bad|movie|film)\b/i;
+        const commonEnglishWords = /\b(the|is|are|was|were|have|has|had|do|does|did|will|would|can|could|should|this|that|these|those|and|but|or|not|very|good|bad|movie|film|show|series|episode)\b/i;
         if (commonEnglishWords.test(text)) return 'english';
 
         return 'english';
@@ -138,11 +136,9 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
             return;
         }
 
-        // Check language first
         const language = detectLanguage(text);
 
         if (language !== 'english') {
-            // IMPORTANT: We set a 'skipped' sentiment so the button UNLOCKS for non-English users
             setSentiment({ label: 'skipped', score: null });
             return;
         }
@@ -162,7 +158,6 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
 
                 const mappedLabel = labelMap[topResult.label] || topResult.label;
 
-                // Set the sentiment (This UNLOCKS the button)
                 setSentiment({
                     label: mappedLabel,
                     score: topResult.score
@@ -175,13 +170,11 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
         }
     };
 
-    // Auto-analyze sentiment when user stops typing
     useEffect(() => {
         if (analysisTimeoutRef.current) {
             clearTimeout(analysisTimeoutRef.current);
         }
 
-        // 1. Wait 1 second after typing stops
         if (reviewText.trim() && !modelLoading && classifierRef.current) {
             analysisTimeoutRef.current = setTimeout(() => {
                 analyzeSentiment(reviewText);
@@ -202,6 +195,10 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
         if (normalizedLabel.includes('negative')) return '🔴';
         return '🟡';
     };
+
+    // Dynamic text based on content type
+    const contentLabel = contentType === 'series' ? 'series' : 'movie';
+    const contentLabelCapitalized = contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1);
 
     if (!isOpen) return null;
 
@@ -237,9 +234,17 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
                                     <div key={review.id} className="bg-gray-800 p-4 rounded-xl border border-gray-700">
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                                                    {review.profiles?.username?.[0]?.toUpperCase() || 'U'}
-                                                </div>
+                                                {review.profiles?.avatar_url ? (
+                                                    <img
+                                                        src={review.profiles.avatar_url}
+                                                        alt={review.profiles.username || 'User'}
+                                                        className="w-8 h-8 rounded-full object-cover border-2 border-purple-500"
+                                                    />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                                                        {review.profiles?.username?.[0]?.toUpperCase() || 'U'}
+                                                    </div>
+                                                )}
                                                 <span className="text-gray-300 text-sm font-medium">
                                                     {review.profiles?.username || 'Anonymous'}
                                                 </span>
@@ -269,7 +274,7 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
                         <div className="p-6 flex-1 flex flex-col">
                             <textarea
                                 className="w-full h-72 p-4 bg-gray-800 text-white border border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500 resize-none text-lg"
-                                placeholder="What did you think about the movie?"
+                                placeholder={`What did you think about the ${contentLabel}?`}
                                 value={reviewText}
                                 onChange={(e) => {
                                     setReviewText(e.target.value);
@@ -278,7 +283,6 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
                                 autoFocus
                             />
 
-                            {/* Status Indicator */}
                             <div className="mt-4 flex items-center gap-2 h-6">
                                 {analyzing ? (
                                     <span className="text-purple-400 text-sm flex items-center gap-2">
@@ -299,10 +303,8 @@ const ReviewModal = ({ isOpen, onClose, movieId }) => {
                                 Cancel
                             </button>
 
-
                             <button
                                 onClick={handlePublish}
-                                // Disable An: Den exei text / Kanei analyze / Den exei sentiment
                                 disabled={!reviewText.trim() || analyzing || !sentiment}
                                 className={`px-8 py-3 font-bold rounded-lg transition-colors flex items-center gap-2
                                     ${(!reviewText.trim() || analyzing || !sentiment)
