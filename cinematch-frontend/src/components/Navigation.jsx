@@ -42,6 +42,7 @@ export default function Navigation() {
         { path: "/search", Icon: Search, label: "Search" },
         { path: "/quiz", Icon: Brain, label: "Quiz" },
         { path: "/actor-match", Icon: Sparkles, label: "Actor Match" },
+        { path: "/suggest", Icon: Heart, label: "Suggestions" },
         { path: "/CineGram", Icon: MessageSquare, label: "CineGram" },
     ];
 

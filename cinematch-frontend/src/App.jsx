@@ -14,10 +14,9 @@ import Quiz from "./pages/Quiz";
 import NormalQuiz from "./pages/NormalQuiz";
 import RankedQuiz from "./pages/RankedQuiz";
 import RankedStart from "./pages/RankedStart";
-
 import ActorMatchPage from "./pages/ActorMatch";
 import MediaPage from "@/pages/MediaPage.jsx";
-
+import SuggestPage from "./pages/SuggestPage";
 
 export default function App() {
     const location = useLocation();
@@ -127,7 +126,14 @@ export default function App() {
                     }
 
                 />
-
+                <Route
+                    path="/suggest"
+                    element={
+                        <ProtectedRoute>
+                            <SuggestPage />
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
         </>
     );

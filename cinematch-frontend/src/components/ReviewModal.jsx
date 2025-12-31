@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, PlusCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { pipeline, env } from '@xenova/transformers';
+import { getMovieDetails, getTvDetails } from '@/lib/tmdbBackend';
 
-// Configure Transformers.js to use remote models
 env.allowLocalModels = false;
 env.allowRemoteModels = true;
 
@@ -19,13 +19,11 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
     const classifierRef = useRef(null);
     const analysisTimeoutRef = useRef(null);
 
-    // Load the sentiment analysis model once
     useEffect(() => {
         async function loadModel() {
             if (classifierRef.current) return;
 
             try {
-                console.log('Starting to load sentiment model...');
                 const sentimentPipeline = await pipeline(
                     'sentiment-analysis',
                     'Xenova/distilbert-base-uncased-finetuned-sst-2-english'
@@ -33,7 +31,6 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
                 classifierRef.current = sentimentPipeline;
                 setModelLoading(false);
                 setModelError(null);
-                console.log('✅ Sentiment model loaded successfully!');
             } catch (error) {
                 console.error('Error loading sentiment model:', error);
                 setModelError(error.message);
@@ -55,7 +52,7 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
         const { data: reviewsData, error: reviewsError } = await supabase
             .from('reviews')
             .select('*')
-            .eq('content_id', contentId)
+            .eq('content_id', String(contentId))
             .eq('content_type', contentType)
             .order('created_at', { ascending: false });
 
@@ -81,47 +78,9 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
         setLoading(false);
     };
 
-    const handlePublish = async () => {
-        if (!reviewText.trim() || !sentiment) return;
-
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            alert("You must be logged in to post a review");
-            return;
-        }
-
-        let normalizedSentiment = null;
-        if (sentiment?.label && sentiment.label !== 'skipped') {
-            normalizedSentiment = sentiment.label.toLowerCase().includes('positive') ? 'positive' : 'negative';
-        }
-
-        const { error } = await supabase
-            .from('reviews')
-            .insert([{
-                content: reviewText,
-                sentiment: normalizedSentiment,
-                sentiment_score: sentiment?.score || null,
-                content_id: contentId,
-                content_type: contentType,
-                user_id: user.id
-            }]);
-
-        if (!error) {
-            await fetchReviews();
-            setReviewText("");
-            setSentiment(null);
-            setView('list');
-        } else {
-            console.error("Error posting review:", error);
-            alert(`Failed to post review: ${error.message}`);
-        }
-    };
-
     const detectLanguage = (text) => {
         const hasNonLatin = /[^\u0000-\u024F\u1E00-\u1EFF]/.test(text);
         if (hasNonLatin) return 'non-english';
-
         if (text.length < 10) return 'english';
 
         const commonEnglishWords = /\b(the|is|are|was|were|have|has|had|do|does|did|will|would|can|could|should|this|that|these|those|and|but|or|not|very|good|bad|movie|film|show|series|episode)\b/i;
@@ -137,7 +96,6 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
         }
 
         const language = detectLanguage(text);
-
         if (language !== 'english') {
             setSentiment({ label: 'skipped', score: null });
             return;
@@ -148,19 +106,17 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
         setAnalyzing(true);
         try {
             const result = await classifierRef.current(text);
-
             if (result && result[0]) {
-                const topResult = result[0];
+                const top = result[0];
                 const labelMap = {
                     'LABEL_1': 'Positive', 'LABEL_0': 'Negative',
                     'POSITIVE': 'Positive', 'NEGATIVE': 'Negative'
                 };
-
-                const mappedLabel = labelMap[topResult.label] || topResult.label;
+                const mappedLabel = labelMap[top.label] || top.label;
 
                 setSentiment({
                     label: mappedLabel,
-                    score: topResult.score
+                    score: top.score
                 });
             }
         } catch (error) {
@@ -190,15 +146,76 @@ const ReviewModal = ({ isOpen, onClose, contentId, contentType = 'movie' }) => {
 
     const getEmoji = (label) => {
         if (!label || label === 'skipped') return '❌';
-        const normalizedLabel = label.toLowerCase();
-        if (normalizedLabel.includes('positive')) return '🟢';
-        if (normalizedLabel.includes('negative')) return '🔴';
+        const normalized = label.toLowerCase();
+        if (normalized.includes('positive')) return '🟢';
+        if (normalized.includes('negative')) return '🔴';
         return '🟡';
     };
 
-    // Dynamic text based on content type
+    // Fetch genres from TMDB right before insert
+    const fetchGenreIdsForContent = async () => {
+        try {
+            const id = Number(contentId);
+            if (!Number.isFinite(id)) return [];
+
+            if (contentType === "series") {
+                const d = await getTvDetails(id);
+                return Array.isArray(d?.genres) ? d.genres.map(g => g.id) : [];
+            }
+            // default movie
+            const d = await getMovieDetails(id);
+            return Array.isArray(d?.genres) ? d.genres.map(g => g.id) : [];
+        } catch (e) {
+            console.error("Failed to fetch genres from TMDB:", e);
+            return [];
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!reviewText.trim() || !sentiment) return;
+
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData?.user;
+
+        if (!user) {
+            alert("You must be logged in to post a review");
+            return;
+        }
+
+        let normalizedSentiment = null;
+        if (sentiment?.label && sentiment.label !== 'skipped') {
+            normalizedSentiment = sentiment.label.toLowerCase().includes('positive')
+                ? 'positive'
+                : 'negative';
+        }
+
+        // Get genres from TMDB
+        const genre_ids = await fetchGenreIdsForContent();
+
+        const { error } = await supabase
+            .from('reviews')
+            .insert([{
+                content: reviewText,
+                sentiment: normalizedSentiment,
+                sentiment_score: sentiment?.score || null,
+                content_id: String(contentId),
+                content_type: contentType,
+                genre_ids, // ✅ saved in table
+                user_id: user.id
+            }]);
+
+        if (!error) {
+            await fetchReviews();
+            setReviewText("");
+            setSentiment(null);
+            setView('list');
+        } else {
+            console.error("Error posting review:", error);
+            alert(`Failed to post review: ${error.message}`);
+        }
+    };
+
     const contentLabel = contentType === 'series' ? 'series' : 'movie';
-    const contentLabelCapitalized = contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1);
 
     if (!isOpen) return null;
 
