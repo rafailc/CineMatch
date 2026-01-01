@@ -34,7 +34,7 @@ export default function AboutUsPage() {
             handle: "Pakotinis",
             avatarUrl: "/avatars/lol.png",
             miniAvatarUrl: "/avatars/3.jpg",
-            iconUrl: "/icons/fotia.png",
+            iconUrl: "/icons/watar.png",
             enableTilt:    true,
             behindGlowEnable: false,
         },
@@ -64,8 +64,8 @@ export default function AboutUsPage() {
             title: "Developer",
             handle: "mar",
             avatarUrl: "/avatars/2.png",
-            miniAvatarUrl: "/avatars/2.png",
-            iconUrl: "/icons/fire.png",
+            miniAvatarUrl: "/avatars/g.png",
+            iconUrl: "/icons/bomb.png",
             enableTilt:    true,
             behindGlowEnable: false,
         },
@@ -75,27 +75,39 @@ export default function AboutUsPage() {
             handle: "3genis",
             avatarUrl: "/avatars/10.png",
             miniAvatarUrl: "/avatars/9.png",
-            iconUrl: "/icons/fire.png",
+            iconUrl: "/icons/fotia.png",
             enableTilt:    true,
             behindGlowEnable: false,
         },
         {
-            name: "Developer 8",
-            title: "Mobile Engineer",
-            handle: "dev8",
-            avatarUrl: "/avatars/dev8.png",
+            name: "Georgios L.",
+            title: "Developer",
+            handle: "9iconic6",
+            avatarUrl: "/avatars/a.png",
+            miniAvatarUrl: "/avatars/b.png",
+            iconUrl: "/icons/death.png",
+            enableTilt:    true,
+            behindGlowEnable: false,
         },
         {
-            name: "Developer 9",
-            title: "Cloud Architect",
-            handle: "dev9",
-            avatarUrl: "/avatars/dev9.png",
+            name: "Vasilis K.",
+            title: "Developer",
+            handle: "billys",
+            avatarUrl: "/avatars/c.png",
+            miniAvatarUrl: "/avatars/f.png",
+            iconUrl: "/icons/snow.png",
+            enableTilt:    true,
+            behindGlowEnable: false,
         },
         {
-            name: "Developer 10",
-            title: "Game Developer",
-            handle: "dev10",
-            avatarUrl: "/avatars/dev10.png",
+            name: "Athanasios F.",
+            title: "Developer",
+            handle: "fitsios_th",
+            avatarUrl: "/avatars/d.png",
+            miniAvatarUrl: "/avatars/e.png",
+            iconUrl: "/icons/spear.png",
+            enableTilt:    true,
+            behindGlowEnable: false,
         },
     ];
 
@@ -119,7 +131,8 @@ export default function AboutUsPage() {
                             iconUrl={dev.iconUrl}
                             grainUrl={dev.grainUrl}
                             behindGlowEnabled={true}
-                            className={dev.handle === "ClownaKYS" ? "lift-avatar" : ""}
+                            className={dev.handle === "ClownaKYS" || dev.handle === "fitsios_th" ? "lift-avatar" : ""}
+
                         />
                     ))}
                 </div>

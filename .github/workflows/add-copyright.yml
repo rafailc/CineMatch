@@ -1,0 +1,48 @@
+name: Add Copyright Headers
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  apply-headers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Apply License Headers
+        run: |
+          echo "Starting header application..."
+
+          # 1. Process Java Files
+          find . -type f -name "*.java" ! -path "*/.*" | while read file; do
+            # Check if the FIRST LINE starts with '/*'
+            FIRST_LINE=$(head -n 1 "$file")
+            if [[ "$FIRST_LINE" != "/*"* ]]; then
+              echo " Adding header to Java file: $file"
+              cat .github/headers/java.txt "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+            else
+              echo " Skipping $file (Header already exists at top)"
+            fi
+          done
+
+          # 2. Process JS and JSX Files
+          find . -type f \( -name "*.js" -o -name "*.jsx" \) ! -path "*/node_modules/*" ! -path "*/.*" | while read file; do
+            FIRST_LINE=$(head -n 1 "$file")
+            if [[ "$FIRST_LINE" != "/*"* ]]; then
+              echo " Adding header to JS file: $file"
+              cat .github/headers/js.txt "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+            else
+              echo " Skipping $file (Header already exists at top)"
+            fi
+          done
+
+      - name: Commit and Push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: apply license headers [skip ci]"
+          branch: main
