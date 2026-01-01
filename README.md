@@ -1,4 +1,8 @@
-How to Run the CineMatch App:
+## License
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+See the [LICENSE](LICENSE) file.
+
+## How to Run the CineMatch App:
 
 1.   In the `cinematch-frontend` folder, create a `.env` file and add:
    VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
