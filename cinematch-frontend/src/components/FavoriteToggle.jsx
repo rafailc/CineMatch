@@ -16,24 +16,22 @@
 import { Heart } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { recomputeAndStoreGenreAffinity } from "@/lib/affinity";
 
 export default function FavoriteToggle({ item }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [loading, setLoading] = useState(true);
-
-
 
     useEffect(() => {
         checkIfFavorite();
     }, [item]);
 
     async function checkIfFavorite() {
-        const {
-            data: { user }
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
             setIsFavorite(false);
+            setLoading(false);
             return;
         }
 
@@ -59,8 +57,13 @@ export default function FavoriteToggle({ item }) {
             return;
         }
 
+
+        const genres =
+            Array.isArray(item.genres) ? item.genres.map(g => g.name) :
+                Array.isArray(item.genre_ids) ? item.genre_ids :
+                    [];
+
         if (isFavorite) {
-            // REMOVE FAVORITE
             const { error } = await supabase
                 .from("user_favorites")
                 .delete()
@@ -75,24 +78,25 @@ export default function FavoriteToggle({ item }) {
 
             toast.success("Removed from favorites");
             setIsFavorite(false);
+            recomputeAndStoreGenreAffinity(user.id).catch(console.error);
             return;
         }
 
-        // ADD FAVORITE
         const { error } = await supabase.from("user_favorites").insert({
             user_id: user.id,
             tmdb_id: item.id,
             title: item.title || item.name,
-            genres: item.genres.map((g) => g.name),
-            media_type: item.media_type
+            genres: Array.isArray(genres) ? genres : [],
+            media_type: item.media_type,
         });
 
         if (error) {
             toast.error(error.message);
-        } else {
-            toast.success("Added to favorites!");
-            setIsFavorite(true);
+            return;
         }
+        setIsFavorite(true);
+        toast.success("Added to favorites!");
+        recomputeAndStoreGenreAffinity(user.id).catch(console.error);
     }
 
     return (

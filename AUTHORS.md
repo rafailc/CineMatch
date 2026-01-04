@@ -19,3 +19,6 @@ University / Department:
 Course:
 - Technologies Logismikou (7o 2025-2026)
 
+Project Manager:
+- Rafail-Polyzois Chatzis
+

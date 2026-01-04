@@ -12,7 +12,7 @@
  * See the GNU General Public License for more details.
  *
  * If not, see <https://www.gnu.org/licenses/>.
- */import { Film, Search, Brain, Sparkles, MessageSquare, LogOut } from "lucide-react";
+ */import { Film, Search, Brain, Sparkles, MessageSquare, LogOut, Users } from "lucide-react";
 import NavLink from "../components/NavLink.jsx";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -58,6 +58,7 @@ export default function Navigation() {
         { path: "/actor-match", Icon: Sparkles, label: "Actor Match" },
         { path: "/suggest", Icon: Heart, label: "Suggestions" },
         { path: "/CineGram", Icon: MessageSquare, label: "CineGram" },
+        { path: "/tinder", Icon: Users, label: "CineBuds" },
     ];
 
     return (
