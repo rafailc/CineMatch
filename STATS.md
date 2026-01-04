@@ -1,5 +1,5 @@
 # Repository Statistics
-Last updated: Sun Jan  4 19:03:13 UTC 2026
+Last updated: Sun Jan  4 19:05:41 UTC 2026
 
 ### 📈 Total Manual Lines currently in Project: **21054**
 > Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
@@ -9,10 +9,10 @@ Last updated: Sun Jan  4 19:03:13 UTC 2026
 | :--- | :--- | :--- | :--- | :--- |
 | Kourougenis | 1862 | 115 | 159 | 890 |
 | Lefteris Lemontzoglou | 1965 | 145 | 189 | 6293 |
-| Leo | 2161 | 338 | 0 | 19 |
+| Leo | 1553 | 338 | 0 | 19 |
 | Panos Kagoudis | 1143 | 228 | 0 | 980 |
 | PanosMasman | 1530 | 141 | 0 | 40 |
-| Rafail chatzis | 2359 | 951 | 0 | 0 |
+| Rafail chatzis | 2360 | 952 | 0 | 0 |
 | Stathis69 | 1648 | 98 | 15 | 303 |
 | fitsiosth | 1517 | 29 | 0 | 2 |
 | liakou0 | 1591 | 203 | 296 | 11 |
