@@ -27,7 +27,6 @@ jobs:
           mkdir -p stats-out
           
           # 3. IDENTIFY EXCLUSIONS
-          # Exclusion 1: HTML Reports (PR #33)
           BAD_FILES=$(find . \( -path "*/htmlReport/*" -o -name "Test Results - MovieControllerTest.html" \) -type f 2>/dev/null || true)
           TOTAL_BAD_LINES=0
           if [ -n "$BAD_FILES" ]; then
@@ -37,12 +36,13 @@ jobs:
             done <<< "$BAD_FILES"
           fi
           
-          # Fallback if files were deleted
           if [ "$TOTAL_BAD_LINES" -eq 0 ]; then
              TOTAL_BAD_LINES=2500 
           fi
 
           SUPA_BAD_LINES=574
+          LICENSE_LINES=681
+          DB_LINES=450 
 
           # 4. Calculate Project Total
           TOTAL_PROJECT_LINES=$(git log --numstat --pretty=tformat: --no-merges | \
@@ -62,6 +62,10 @@ jobs:
 
           # 5. Calculate stats for each author
           git log --format='%aN' | sort -u | while read author; do
+            if [[ "$author" == "rafailc" ]]; then
+              continue
+            fi
+
             stats_raw=$(git log --author="$author" --numstat --pretty=tformat: --no-merges)
             
             manual_stats=$(echo "$stats_raw" | grep -vE "$AUTO_PATTERNS" | grep -v "\.css" | \
@@ -79,6 +83,15 @@ jobs:
               m_add=$((m_add - SUPA_BAD_LINES))
             fi
 
+            if [[ "$author" == *"Rafail"* ]]; then
+              m_add=$((m_add - LICENSE_LINES))
+            fi
+
+            # New exclusion for Leo (PR #190)
+            if [[ "$author" == *"Leo"* ]]; then
+              m_add=$((m_add - DB_LINES))
+            fi
+
             if [ "$m_add" -lt 0 ]; then m_add=0; fi
 
             s_add=$(echo "$stats_raw" | grep "\.css" | awk '{ add += $1 } END { print add+0 }')
@@ -93,9 +106,13 @@ jobs:
           echo "" >> stats-out/STATS.md
           echo "---" >> stats-out/STATS.md
           echo "### ⚠️ Notices" >> stats-out/STATS.md
-          echo "1. The contributor **@PanosMasman** (Panagiotis Masmanidis) had mistakenly committed the HTML report files (including the \`htmlReport\` directory) and **Test Results - MovieControllerTest.html** with a total of **$TOTAL_BAD_LINES lines** that has nothing to do with the project. These lines have been excluded from their Manual (+) count above. It was to test his code and he forgot to remove it." >> stats-out/STATS.md
+          echo "1. The contributor **@PanosMasman** (Panagiotis Masmanidis) had mistakenly committed the HTML report files (including the \`htmlReport\` directory) and **Test Results - MovieControllerTest.html** on **PR(#33)** with a total of **$TOTAL_BAD_LINES lines** that has nothing to do with the project. These lines have been excluded from their Manual (+) count above." >> stats-out/STATS.md
           echo "" >> stats-out/STATS.md
-          echo "2. A Supabase-related folder (\`supabase/\`) containing two files (\`config.toml\` and \`index.ts\`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** in total and was missed during code review. Those lines have been removed from the manual (+) count, and the files have since been deleted." >> stats-out/STATS.md
+          echo "2. A Supabase-related folder (\`supabase/\`) containing two files (\`config.toml\` and \`index.ts\`) was unintentionally committed in **PR #104** (authored by **@Lefteris Lemontzoglou**). This added **574 lines** and was missed during code review. Those lines have been removed from the manual (+) count." >> stats-out/STATS.md
+          echo "" >> stats-out/STATS.md
+          echo "3. **Rafail Chatzis** committed the LICENSE file to the project on **PR(#185)**. Since it is not source code, its 681 lines are excluded from the manual total." >> stats-out/STATS.md
+          echo "" >> stats-out/STATS.md
+          echo "4. The initial database setup (table creation and RLS policies) was committed by **Leo** on **PR(#190)** and is largely a port of existing SQL scripts wrapped in a Spring Boot startup migration runner (CommandLineRunner). Since this is schema initialization/migration boilerplate rather than application feature logic, those lines are being excluded from their manual total and counted separately." >> stats-out/STATS.md
 
       - name: Deploy to Stats Branch
         uses: JamesIves/github-pages-deploy-action@v4
