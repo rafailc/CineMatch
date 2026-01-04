@@ -56,7 +56,6 @@ export default function CineBudsProfilePage() {
                 return;
             }
 
-            // put new photos after current last sort_order
             const baseOrder = photos.length
                 ? Math.max(...photos.map((p) => p.sort_order ?? 0)) + 1
                 : 0;
@@ -73,7 +72,6 @@ export default function CineBudsProfilePage() {
 
                 const path = `${me.id}/${safeId}.${ext}`;
 
-                // 1) upload to storage
                 const { error: upErr } = await supabase.storage
                     .from("profile-photos")
                     .upload(path, file, {
@@ -87,7 +85,6 @@ export default function CineBudsProfilePage() {
                     continue;
                 }
 
-                // 2) get public url
                 const { data: pub } = supabase.storage
                     .from("profile-photos")
                     .getPublicUrl(path);
@@ -98,7 +95,6 @@ export default function CineBudsProfilePage() {
                     continue;
                 }
 
-                // 3) insert into DB
                 const { error: dbErr } = await supabase.from("profile_photos").insert({
                     user_id: me.id,
                     url,
@@ -124,7 +120,6 @@ export default function CineBudsProfilePage() {
             console.error("UPLOAD CRASH:", err);
             toast.error(`Upload crashed: ${err?.message || "unknown error"}`);
         } finally {
-            // reset input so same files can be chosen again
             e.target.value = "";
         }
     }
@@ -133,7 +128,6 @@ export default function CineBudsProfilePage() {
         const ok = confirm("Delete this photo?");
         if (!ok) return;
 
-        // delete from storage too (best effort)
         try {
             const marker = "/profile-photos/";
             const i = url.indexOf(marker);

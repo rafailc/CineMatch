@@ -66,14 +66,12 @@ function mergePreferences(favoriteAffinity, explicitGenreIds, favoritesCount = 0
     const scores = new Map();
 
     const k = 10;
-    const alpha = favoritesCount / (favoritesCount + k); // 0..1
+    const alpha = favoritesCount / (favoritesCount + k);
 
-    // favorites side
     for (const g of favoriteAffinity || []) {
         scores.set(g.genre, (scores.get(g.genre) || 0) + alpha * g.percentage);
     }
 
-    // explicit side
     const explicitNames = (explicitGenreIds || [])
         .map(id => GENRE_ID_TO_NAME[id])
         .filter(Boolean);

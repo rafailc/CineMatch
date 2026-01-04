@@ -57,10 +57,10 @@ export default function FavoriteToggle({ item }) {
             return;
         }
 
-        // guard: item.genres might not exist on list pages
+
         const genres =
             Array.isArray(item.genres) ? item.genres.map(g => g.name) :
-                Array.isArray(item.genre_ids) ? item.genre_ids : // if you ever store ids
+                Array.isArray(item.genre_ids) ? item.genre_ids :
                     [];
 
         if (isFavorite) {

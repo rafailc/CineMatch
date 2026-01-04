@@ -14,7 +14,7 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { recomputeAndStoreGenreAffinity } from "../lib/affinity"; // ✅ relative import
+import { recomputeAndStoreGenreAffinity } from "../lib/affinity";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }) => {
         if (lastComputedForUser.current === u.id) return;
         lastComputedForUser.current = u.id;
 
-        // ✅ don't await; don't block render
         recomputeAndStoreGenreAffinity(u.id).catch((e) => {
             console.error("Affinity recompute failed:", e);
         });
@@ -48,12 +47,10 @@ export const AuthProvider = ({ children }) => {
                 setSession(data.session);
                 setUser(data.session?.user ?? null);
 
-                // ✅ trigger recompute if logged in
                 runAffinityOnce(data.session?.user);
             } catch (e) {
                 console.error("Auth init failed:", e);
             } finally {
-                // ✅ ALWAYS release loading
                 setLoading(false);
             }
         };

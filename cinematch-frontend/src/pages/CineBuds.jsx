@@ -47,7 +47,6 @@ function topSharedGenres(my, other, n = 3) {
 async function ensureConversation(userA, userB) {
     const [user1, user2] = userA < userB ? [userA, userB] : [userB, userA];
 
-    // Try insert
     const { data: inserted, error: insErr } = await supabase
         .from("conversations")
         .insert({ user1_id: user1, user2_id: user2 })
@@ -56,7 +55,6 @@ async function ensureConversation(userA, userB) {
 
     if (!insErr && inserted?.id) return inserted.id;
 
-    // If already exists, fetch
     const { data: existing, error: selErr } = await supabase
         .from("conversations")
         .select("id")
@@ -139,7 +137,6 @@ function MyTinderProfile({ open }) {
 
     useEffect(() => {
         if (open) init();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     async function init() {
@@ -383,16 +380,13 @@ export default function CineBuds() {
 
     const [showMyProfile, setShowMyProfile] = useState(false);
 
-    // preference gate
     const [user, setUser] = useState(null);
     const [prefModalOpen, setPrefModalOpen] = useState(false);
 
     const current = useMemo(() => cards[idx], [cards, idx]);
 
-    // ✅ Gate Tinder: open preferences if no genres selected
     useEffect(() => {
         initGate();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     async function initGate() {
@@ -409,7 +403,6 @@ export default function CineBuds() {
 
         setUser(me);
 
-        // check explicit genres selection
         const { data: prefRow, error } = await supabase
             .from("user_preferences")
             .select("genres")
@@ -421,13 +414,11 @@ export default function CineBuds() {
         const selected = prefRow?.genres || [];
 
         if (!selected.length) {
-            // force modal
             setPrefModalOpen(true);
             setLoading(false);
             return;
         }
 
-        // else load normal tinder
         await Promise.all([loadDeck(), loadMatches()]);
         setLoading(false);
     }
@@ -709,7 +700,6 @@ export default function CineBuds() {
                 user={user}
                 onClose={async () => {
                     setPrefModalOpen(false);
-                    // after saving, load tinder
                     setLoading(true);
                     await Promise.all([loadDeck(), loadMatches()]);
                     setLoading(false);

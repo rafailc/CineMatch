@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 export default function MatchesPage() {
     const [loading, setLoading] = useState(true);
-    const [rows, setRows] = useState([]); // [{match, profile}]
+    const [rows, setRows] = useState([]);
 
     useEffect(() => {
         loadMatches();
@@ -22,7 +22,6 @@ export default function MatchesPage() {
             return;
         }
 
-        // 1) get matches
         const { data: matches, error: mErr } = await supabase
             .from("user_matches")
             .select("id, matched_user_id, similarity, shared_genres, created_at")
@@ -44,7 +43,6 @@ export default function MatchesPage() {
 
         const ids = matches.map(m => m.matched_user_id);
 
-        // 2) get profiles for matched users
         const { data: profs, error: pErr } = await supabase
             .from("profiles")
             .select("id, username, avatar_url, email")

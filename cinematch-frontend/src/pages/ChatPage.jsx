@@ -19,7 +19,6 @@ export default function ChatPage() {
 
     const canSend = useMemo(() => Boolean(meId && conversationId), [meId, conversationId]);
 
-    // keep scroll at bottom when messages change
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages.length]);
@@ -40,7 +39,6 @@ export default function ChatPage() {
                     filter: `conversation_id=eq.${conversationId}`,
                 },
                 (payload) => {
-                    // avoid duplicates (if we also optimistically appended)
                     setMessages((prev) => {
                         if (prev.some((m) => m.id === payload.new.id)) return prev;
                         return [...prev, payload.new];
@@ -52,7 +50,6 @@ export default function ChatPage() {
         return () => {
             supabase.removeChannel(channel);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversationId]);
 
     async function init() {
@@ -67,7 +64,6 @@ export default function ChatPage() {
         }
         setMeId(me.id);
 
-        // load conversation
         const { data: conv, error: convErr } = await supabase
             .from("conversations")
             .select("id, user1_id, user2_id")
@@ -83,7 +79,6 @@ export default function ChatPage() {
 
         const otherId = conv.user1_id === me.id ? conv.user2_id : conv.user1_id;
 
-        // load other user profile for header/name
         const { data: prof, error: profErr } = await supabase
             .from("profiles")
             .select("username, email")
@@ -118,7 +113,6 @@ export default function ChatPage() {
 
         setText("");
 
-        // ✅ optimistic UI message (shows instantly)
         const tempId = `temp-${Date.now()}`;
         const optimistic = {
             id: tempId,
@@ -128,7 +122,6 @@ export default function ChatPage() {
         };
         setMessages((prev) => [...prev, optimistic]);
 
-        // ✅ send to DB
         const { data: inserted, error } = await supabase
             .from("messages")
             .insert({
@@ -143,18 +136,15 @@ export default function ChatPage() {
             console.error(error);
             toast.error("Failed to send");
 
-            // rollback optimistic message
             setMessages((prev) => prev.filter((m) => m.id !== tempId));
             return;
         }
 
-        // replace temp with real DB row
         if (inserted?.id) {
             setMessages((prev) =>
                 prev.map((m) => (m.id === tempId ? inserted : m))
             );
         } else {
-            // fallback: reload messages if no returned row
             await loadMessages();
         }
     }
