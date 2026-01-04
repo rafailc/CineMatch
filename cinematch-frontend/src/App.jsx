@@ -31,6 +31,8 @@ import RankedStart from "./pages/RankedStart";
 import ActorMatchPage from "./pages/ActorMatch";
 import MediaPage from "@/pages/MediaPage.jsx";
 import SuggestPage from "./pages/SuggestPage";
+import CineBuds from "./pages/CineBuds.jsx";
+import ChatPage from "./pages/ChatPage";
 
 export default function App() {
     const location = useLocation();
@@ -145,6 +147,23 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <SuggestPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/tinder"
+                    element={
+                        <ProtectedRoute>
+                            <CineBuds />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/chat/:id"
+                    element={
+                        <ProtectedRoute>
+                            <ChatPage />
                         </ProtectedRoute>
                     }
                 />

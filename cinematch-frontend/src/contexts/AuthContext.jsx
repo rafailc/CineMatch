@@ -12,11 +12,11 @@
  * See the GNU General Public License for more details.
  *
  * If not, see <https://www.gnu.org/licenses/>.
- */import React, { createContext, useContext, useEffect, useState } from "react";
+ */import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { recomputeAndStoreGenreAffinity } from "../lib/affinity"; // ✅ relative import
 
 const AuthContext = createContext(null);
-
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -24,29 +24,54 @@ export const AuthProvider = ({ children }) => {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Restore session on refresh
+    const lastComputedForUser = useRef(null);
+
+    const runAffinityOnce = (u) => {
+        if (!u?.id) return;
+        if (lastComputedForUser.current === u.id) return;
+        lastComputedForUser.current = u.id;
+
+        // ✅ don't await; don't block render
+        recomputeAndStoreGenreAffinity(u.id).catch((e) => {
+            console.error("Affinity recompute failed:", e);
+        });
+    };
+
     useEffect(() => {
+        let subscription;
+
         const init = async () => {
-            const { data } = await supabase.auth.getSession();
-            setSession(data.session);
-            setUser(data.session?.user ?? null);
-            setLoading(false);
+            try {
+                const { data, error } = await supabase.auth.getSession();
+                if (error) console.error("getSession error:", error);
+
+                setSession(data.session);
+                setUser(data.session?.user ?? null);
+
+                // ✅ trigger recompute if logged in
+                runAffinityOnce(data.session?.user);
+            } catch (e) {
+                console.error("Auth init failed:", e);
+            } finally {
+                // ✅ ALWAYS release loading
+                setLoading(false);
+            }
         };
 
         init();
 
-        // Listen for login/logout events
-        const {
-            data: { subscription }
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        const subRes = supabase.auth.onAuthStateChange((event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
+
+            if (event === "SIGNED_IN" && session?.user) runAffinityOnce(session.user);
+            if (event === "SIGNED_OUT") lastComputedForUser.current = null;
         });
 
-        return () => subscription.unsubscribe();
+        subscription = subRes.data.subscription;
+        return () => subscription?.unsubscribe();
     }, []);
 
-    // LOGIN
     const signIn = async (email, password) => {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
@@ -55,18 +80,18 @@ export const AuthProvider = ({ children }) => {
 
         if (error) return { error };
 
-        // Set local state immediately
         setUser(data.user);
         setSession(data.session);
 
+        runAffinityOnce(data.user);
         return { error: null };
     };
 
-    // LOGOUT
     const signOut = async () => {
         await supabase.auth.signOut();
         setUser(null);
         setSession(null);
+        lastComputedForUser.current = null;
     };
 
     return (
