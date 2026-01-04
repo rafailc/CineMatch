@@ -42,7 +42,7 @@ jobs:
 
           SUPA_BAD_LINES=574
           LICENSE_LINES=681
-          DB_LINES=450 
+          DB_LINES=1058 
 
           # 4. Calculate Project Total
           TOTAL_PROJECT_LINES=$(git log --numstat --pretty=tformat: --no-merges | \
