@@ -1,7 +1,7 @@
 # Repository Statistics
-Last updated: Sun Jan  4 19:05:41 UTC 2026
+Last updated: Tue Jan  6 11:42:16 UTC 2026
 
-### 📈 Total Manual Lines currently in Project: **21054**
+### 📈 Total Manual Lines currently in Project: **15032**
 > Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
 
 ## 📊 Contributor Impact
@@ -12,7 +12,7 @@ Last updated: Sun Jan  4 19:05:41 UTC 2026
 | Leo | 1553 | 338 | 0 | 19 |
 | Panos Kagoudis | 1143 | 228 | 0 | 980 |
 | PanosMasman | 1530 | 141 | 0 | 40 |
-| Rafail chatzis | 2360 | 952 | 0 | 0 |
+| Rafail chatzis | 2370 | 956 | 0 | 0 |
 | Stathis69 | 1648 | 98 | 15 | 303 |
 | fitsiosth | 1517 | 29 | 0 | 2 |
 | liakou0 | 1591 | 203 | 296 | 11 |
@@ -27,3 +27,4 @@ Last updated: Sun Jan  4 19:05:41 UTC 2026
 3. **Rafail Chatzis** committed the LICENSE file to the project on **PR(#185)**. Since it is not source code, its 681 lines are excluded from the manual total.
 
 4. The initial database setup (table creation and RLS policies) was committed by **Leo** on **PR(#190)** and is largely a port of existing SQL scripts wrapped in a Spring Boot startup migration runner (CommandLineRunner). Since this is schema initialization/migration boilerplate rather than application feature logic, those lines are being excluded from their manual total and counted separately.
+5. The username **@rafailc** is used by automated GitHub Actions to push generated code and updates. A total of **2860 lines** were identified as automated/bot-driven and have been excluded from the total manual project count to ensure accuracy.
