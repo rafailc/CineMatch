@@ -33,6 +33,7 @@ import MediaPage from "@/pages/MediaPage.jsx";
 import SuggestPage from "./pages/SuggestPage";
 import CineBuds from "./pages/CineBuds.jsx";
 import ChatPage from "./pages/ChatPage";
+import NewHot from "./pages/NewHot";
 
 export default function App() {
     const location = useLocation();
@@ -164,6 +165,14 @@ export default function App() {
                     element={
                         <ProtectedRoute>
                             <ChatPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/news-hot"
+                    element={
+                        <ProtectedRoute>
+                            <NewHot />
                         </ProtectedRoute>
                     }
                 />

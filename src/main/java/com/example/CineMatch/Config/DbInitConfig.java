@@ -556,6 +556,8 @@ ON public.media_likes (post_id);
 CREATE OR REPLACE FUNCTION public.update_likes_count()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_post_id uuid;
@@ -659,6 +661,8 @@ ON public.media_comments (post_id);
 CREATE OR REPLACE FUNCTION public.update_comments_count()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_post_id uuid;
