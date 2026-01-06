@@ -45,9 +45,15 @@ jobs:
           DB_LINES=1058 
 
           # 4. Calculate Project Total
-          TOTAL_PROJECT_LINES=$(git log --numstat --pretty=tformat: --no-merges | \
-                                grep -vE "$AUTO_PATTERNS" | \
-                                awk '{ add += $1; subs += $2 } END { print add - subs }')
+          TOTAL_RAW=$(git log --numstat --pretty=tformat: --no-merges | \
+          grep -vE "$AUTO_PATTERNS" | \
+          awk '{ add += $1; subs += $2 } END { print add - subs }')
+
+          RAFAILC_TOTAL=$(git log --author="rafailc" --numstat --pretty=tformat: --no-merges | \
+          grep -vE "$AUTO_PATTERNS" | \
+          awk '{ add += $1; subs += $2 } END { print add - subs }')
+
+          TOTAL_PROJECT_LINES=$((TOTAL_RAW - RAFAILC_TOTAL - TOTAL_BAD_LINES - LICENSE_LINES - DB_LINES))
 
           echo "# Repository Statistics" > stats-out/STATS.md
           echo "Last updated: $(date -u)" >> stats-out/STATS.md
@@ -113,7 +119,7 @@ jobs:
           echo "3. **Rafail Chatzis** committed the LICENSE file to the project on **PR(#185)**. Since it is not source code, its 681 lines are excluded from the manual total." >> stats-out/STATS.md
           echo "" >> stats-out/STATS.md
           echo "4. The initial database setup (table creation and RLS policies) was committed by **Leo** on **PR(#190)** and is largely a port of existing SQL scripts wrapped in a Spring Boot startup migration runner (CommandLineRunner). Since this is schema initialization/migration boilerplate rather than application feature logic, those lines are being excluded from their manual total and counted separately." >> stats-out/STATS.md
-
+          echo "5. The username **@rafailc** is used by automated GitHub Actions to push generated code and updates. A total of **${RAFAILC_TOTAL:-0} lines** were identified as automated/bot-driven and have been excluded from the total manual project count to ensure accuracy." >> stats-out/STATS.md
       - name: Deploy to Stats Branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
