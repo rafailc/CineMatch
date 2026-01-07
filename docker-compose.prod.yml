@@ -15,6 +15,7 @@ services:
     container_name: spring-app-cinematch
     environment:
       SPRING_DATASOURCE_URL: ${SUPABASE_URL}
+      SPRING_DATASOURCE_USERNAME: postgres.pdfpnmhsvendlsgskjdk
       SPRING_DATASOURCE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
       SPRING_DATASOURCE_PASSWORD: ${SUPABASE_PASSWORD}
       TMDB_API_KEY: ${TMDB_API_KEY}
