@@ -2,11 +2,11 @@
 
 Copyright holders (team members):
 
-- Rafail-Polyzois Chatzis
-- Masmanidis Panagiwths
-- Kagoudis Panagiwths
+- Chatzis Rafail-Polyzois
+- Masmanidis Panagiotis
+- Kagoudis Panagiotis
 - Kiorpes Basilis
-- Kourougenhs Angelos
+- Kourougenis Angelos
 - Pantelidis Stathis
 - Liakou Maria
 - Leontarakis Giwrgos
