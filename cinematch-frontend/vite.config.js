@@ -24,9 +24,12 @@ export default defineConfig({
         },
     },
      build: {
-        rollupOptions: {
-            external: ["@xenova/transformers"],
-        },
+         ssr: {
+             noExternal: ["@xenova/transformers"],
+         },
+         optimizeDeps: {
+             exclude: ["@xenova/transformers"],
+         },
     },
     }
 )
