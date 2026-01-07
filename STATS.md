@@ -1,7 +1,7 @@
 # Repository Statistics
-Last updated: Wed Jan  7 10:28:19 UTC 2026
+Last updated: Wed Jan  7 10:31:10 UTC 2026
 
-### 📈 Total Manual Lines currently in Project: **15513**
+### 📈 Total Manual Lines currently in Project: **14939**
 > Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
 
 ## 📊 Contributor Impact
@@ -12,7 +12,7 @@ Last updated: Wed Jan  7 10:28:19 UTC 2026
 | Leo | 1553 | 338 | 0 | 19 |
 | Panos Kagoudis | 1654 | 261 | 0 | 980 |
 | PanosMasman | 1530 | 141 | 0 | 40 |
-| Rafail chatzis | 2380 | 963 | 0 | 0 |
+| Rafail chatzis | 2381 | 964 | 0 | 0 |
 | Stathis69 | 1648 | 98 | 15 | 303 |
 | fitsiosth | 1517 | 29 | 0 | 2 |
 | liakou0 | 1591 | 203 | 296 | 11 |
