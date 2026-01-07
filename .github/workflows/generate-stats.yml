@@ -53,7 +53,7 @@ jobs:
           grep -vE "$AUTO_PATTERNS" | \
           awk '{ add += $1; subs += $2 } END { print add - subs }')
 
-          TOTAL_PROJECT_LINES=$((TOTAL_RAW - RAFAILC_TOTAL - TOTAL_BAD_LINES - LICENSE_LINES - DB_LINES))
+          TOTAL_PROJECT_LINES=$((TOTAL_RAW - RAFAILC_TOTAL - TOTAL_BAD_LINES - LICENSE_LINES - SUPA_BAD_LINES - DB_LINES))
 
           echo "# Repository Statistics" > stats-out/STATS.md
           echo "Last updated: $(date -u)" >> stats-out/STATS.md
