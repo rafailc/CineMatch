@@ -15,7 +15,27 @@ See the [LICENSE](LICENSE) file.
 This project was created for academic evaluation.
 Any reuse beyond course evaluation **must** comply with GPLv3 and must preserve attribution to the authors.
 
-## How to Run the CineMatch App:
+## App Features & Pages
+See the full feature list here: [Features](docs/App_Features.md)
+
+## Run with Docker Compose
+### Remove old images (optional)
+```angular2html
+docker image rm ghcr.io/${GHCR_OWNER}/cinematch-frontend:latest
+docker image rm ghcr.io/${GHCR_OWNER}/cinematch-backend:latest
+```
+### Run the containers
+```angular2html
+docker compose -f docker-compose.prod.yml up
+```
+- If you want the app to run in the background, add the -d (detached) parameter at the end.
+- Open the app in your browser:
+  http://localhost:5173/
+### Stop the containers
+```angular2html
+docker compose -f docker-compose.prod.yml down
+```
+## How to Run the CineMatch App without Docker:
 1) Supabase Auth setup:
 
 A. Enable the auth
