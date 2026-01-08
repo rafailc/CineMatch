@@ -1,5 +1,5 @@
 # Repository Statistics
-Last updated: Wed Jan  7 15:47:01 UTC 2026
+Last updated: Thu Jan  8 11:24:48 UTC 2026
 
 ### 📈 Total Manual Lines currently in Project: **14946**
 > Note: Total Manual Lines is the current size of the project (Total Additions minus Total Deletions).
@@ -27,4 +27,4 @@ Last updated: Wed Jan  7 15:47:01 UTC 2026
 3. **Rafail Chatzis** committed the LICENSE file to the project on **PR(#185)**. Since it is not source code, its 681 lines are excluded from the manual total.
 
 4. The initial database setup (table creation and RLS policies) was committed by **Leo** on **PR(#190)** and is largely a port of existing SQL scripts wrapped in a Spring Boot startup migration runner (CommandLineRunner). Since this is schema initialization/migration boilerplate rather than application feature logic, those lines are being excluded from their manual total and counted separately.
-5. The username **@rafailc** is used by automated GitHub Actions to push generated code and updates. A total of **2939 lines** were identified as automated/bot-driven and have been excluded from the total manual project count to ensure accuracy.
+5. The username **@rafailc** is used by automated GitHub Actions to push generated code and updates. A total of **3133 lines** were identified as automated/bot-driven and have been excluded from the total manual project count to ensure accuracy.
