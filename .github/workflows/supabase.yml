@@ -42,7 +42,7 @@ jobs:
               const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
               // Ping Supabase by querying a table (e.g., 'songs')
-              const { data, error } = await supabase.from('user_favorites').select('*').limit(10);
+              const { data, error } = await supabase.from('testing').select('*').limit(10);
 
               // Handle errors
               if (error) throw error;
